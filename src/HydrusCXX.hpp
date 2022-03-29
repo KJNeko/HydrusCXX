@@ -10,13 +10,11 @@
 #include <filesystem>
 #include <sqlite_modern_cpp.h>
 
-class Client
-{
+class Client {
 	sqlite::database db;
 
-  public:
-	Client( std::filesystem::path path ) : db( path )
-	{
+public:
+	Client(std::filesystem::path path) : db(path) {
 	}
 };
 
@@ -24,13 +22,11 @@ class Client
 #define SHA1LENGTH 160
 #define SHA512LENGTH 512
 
-class Master
-{
+class Master {
 	sqlite::database db;
 
-  public:
-	Master( std::filesystem::path path ) : db( path )
-	{
+public:
+	Master(std::filesystem::path path) : db(path) {
 	}
 
 	/* [IMPLEMENTED = Y/N]TABLES
@@ -52,23 +48,30 @@ class Master
 
 
 	// hashes
-	uint getHashIdFromHash( std::bitset<256> hash );
-	std::bitset<256> getHash( uint id );
+	uint getHashIdFromHash(std::bitset<256> hash);
+
+	std::bitset<256> getHash(uint id);
 
 	// labels
 	// NOT IMPLEMENTED
 
 	// local_hashes
-	uint getIDFromMD5( std::bitset<MD5LENGTH> hash );
-	uint getIDFromSHA1( std::bitset<SHA1LENGTH> hash );
-	uint getIDFromSHA256( std::bitset<SHA512LENGTH> hash );
-	std::bitset<MD5LENGTH> getMD5( uint id );
-	std::bitset<SHA1LENGTH> getSHA1( uint id );
-	std::bitset<SHA512LENGTH> getSHA512( uint id );
+	uint getIDFromMD5(std::bitset<MD5LENGTH> hash);
+
+	uint getIDFromSHA1(std::bitset<SHA1LENGTH> hash);
+
+	uint getIDFromSHA512(std::bitset<SHA512LENGTH> hash);
+
+	std::bitset<MD5LENGTH> getMD5(uint id);
+
+	std::bitset<SHA1LENGTH> getSHA1(uint id);
+
+	std::bitset<SHA512LENGTH> getSHA512(uint id);
 
 	// namespaces
-	uint getNamespaceIDFromString( std::string );
-	std::string getNamespace( uint id );
+	uint getNamespaceIDFromString(std::string);
+
+	std::string getNamespace(uint id);
 
 	// notes
 	// NOT IMPLEMENTED
@@ -86,14 +89,18 @@ class Master
 	// NOT IMPLEMENTED
 
 	// subtags
-	uint getSubtagIDFromString( std::string );
-	std::string getSubtag( uint id );
+	uint getSubtagIDFromString(std::string);
+
+	std::string getSubtag(uint id);
 
 	// tags
-	uint getTagIDFromPair( uint, uint );
-	uint getTagIdFromStringPair( std::string, std::string );
-	std::pair<uint, uint> getTagPair( uint );
-	std::pair<std::string, std::string> getTagPairString( uint );
+	uint getTagIDFromPair(uint, uint);
+
+	uint getTagIdFromStringPair(std::string, std::string);
+
+	std::pair<uint, uint> getTagPair(uint);
+
+	std::pair<std::string, std::string> getTagPairString(uint);
 
 	// texts
 	// NOT IMPLEMENTED
@@ -106,26 +113,24 @@ class Master
 };
 
 
-class Mappings
-{
+class Mappings {
 	sqlite::database db;
 
-  public:
-	Mappings( std::filesystem::path path ) : db( path )
-	{
+public:
+	Mappings(std::filesystem::path path) : db(path) {
 	}
 };
 
-class HydrusCXX
-{
-  public:
+class HydrusCXX {
+public:
 	// Contains all the basic DB operations/info
 	Mappings mappings;
 	Master master;
 	Client client;
 
 	HydrusCXX() = delete;
-	HydrusCXX( const std::filesystem::path& path );
+
+	HydrusCXX(const std::filesystem::path &path);
 };
 
 
