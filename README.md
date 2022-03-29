@@ -20,6 +20,25 @@ A Hydrus database API written in C++
     - [ ] Write
     - [ ] Read
 
+Examples:
+
+```cpp
+int main()
+  {
+  
+      HydrusCXX db { "/home/kj16609/Desktop/Projects/hydrus/db/" };
+
+      unsigned int tag_id = db.master.getSubtagIDFromString( "toujou koneko" );
+  
+      std::cout << tag_id << std::endl;
+  
+      std::cout << db.master.getSubtag( tag_id ) << std::endl;
+  
+      unsigned int tagPairID = db.master.getTagIdFromStringPair( "character", "toujou koneko" );
+      std::cout << tagPairID << std::endl;
+  }
+```
+
 # Master Class Table operations
 
 ### Hashes operations
