@@ -1,24 +1,37 @@
-
-#include <filesystem>
-#include <iostream>
-#include <string>
-
 #include "HydrusCXX.hpp"
-#include <ringBuffer.hpp>
+#include "stopwatch.hpp"
+
+#include <iostream>
 
 int main()
 {
+	stopwatch::Stopwatch watch( "main" );
+	watch.start();
 
 	HydrusCXX db { "/home/kj16609/Desktop/Projects/hydrus/db/" };
 
-	auto ref = db.master;
+	auto tag_id = db.master.getTagIDFromStringPair( "", "1girl" );
 
-	auto tag_id = ref.getSubtagIDFromString( "toujou koneko" );
+	if ( !tag_id.has_value())
+	{
+		throw std::runtime_error( "FUCK" );
+	}
 
-	std::cout << tag_id << std::endl;
+	auto imageList = db.mappings.getImageList( tag_id.value());
 
-	std::cout << ref.getSubtag( tag_id ) << std::endl;
+	std::cout << imageList.size() << std::endl;
 
-	auto tagPairID = ref.getTagIdFromStringPair( "character", "toujou koneko" );
-	std::cout << tagPairID << std::endl;
+	for ( const auto& hash_id : imageList )
+	{
+		auto tagList = db.mappings.getTagList( hash_id );
+		for ( const auto& tag_id : tagList )
+		{
+			auto strPair = db.master.getTagPairString( tag_id );
+			//std::cout << strPair.value().first << ":" << strPair.value().second << std::endl;
+		}
+	}
+
+	watch.stop();
+	std::cout << watch << std::endl;
+
 }

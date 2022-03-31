@@ -8,13 +8,20 @@
 
 #include <bitset>
 #include <filesystem>
-#include <sqlite_modern_cpp.h>
+#include <unordered_map>
+#include <sqlite3.h>
+#include <optional>
+#include <vector>
 
-class Client {
-	sqlite::database db;
+
+class Client
+{
+	sqlite3* db;
 
 public:
-	Client(std::filesystem::path path) : db(path) {
+	Client( std::filesystem::path path )
+	{
+		sqlite3_open( path.c_str(), &db );
 	}
 };
 
@@ -22,11 +29,25 @@ public:
 #define SHA1LENGTH 160
 #define SHA512LENGTH 512
 
-class Master {
-	sqlite::database db;
+class Master
+{
+	sqlite3* db;
+
+
+	std::unordered_map<uint, std::string> subtagMap;
+
+	std::unordered_map<uint, std::string> namespaceMap;
+
+	std::unordered_map<uint, std::pair<uint, uint>> tagMap;
+
+
+	//Prepared statements
+	//"select namespace_id, subtag_id from tags where tag_id == ?";
 
 public:
-	Master(std::filesystem::path path) : db(path) {
+	Master( std::filesystem::path path )
+	{
+		sqlite3_open( path.c_str(), &db );
 	}
 
 	/* [IMPLEMENTED = Y/N]TABLES
@@ -48,30 +69,30 @@ public:
 
 
 	// hashes
-	uint getHashIdFromHash(std::bitset<256> hash);
+	uint getHashIdFromHash( std::bitset<256> hash );
 
-	std::bitset<256> getHash(uint id);
+	std::bitset<256> getHash( uint id );
 
 	// labels
 	// NOT IMPLEMENTED
 
 	// local_hashes
-	uint getIDFromMD5(std::bitset<MD5LENGTH> hash);
+	uint getIDFromMD5( std::bitset<MD5LENGTH> hash );
 
-	uint getIDFromSHA1(std::bitset<SHA1LENGTH> hash);
+	uint getIDFromSHA1( std::bitset<SHA1LENGTH> hash );
 
-	uint getIDFromSHA512(std::bitset<SHA512LENGTH> hash);
+	uint getIDFromSHA512( std::bitset<SHA512LENGTH> hash );
 
-	std::bitset<MD5LENGTH> getMD5(uint id);
+	std::bitset<MD5LENGTH> getMD5( uint id );
 
-	std::bitset<SHA1LENGTH> getSHA1(uint id);
+	std::bitset<SHA1LENGTH> getSHA1( uint id );
 
-	std::bitset<SHA512LENGTH> getSHA512(uint id);
+	std::bitset<SHA512LENGTH> getSHA512( uint id );
 
 	// namespaces
-	uint getNamespaceIDFromString(std::string);
+	std::optional<uint> getNamespaceIDFromString( const std::string& group );
 
-	std::string getNamespace(uint id);
+	std::optional<std::string> getNamespace( uint namespace_id );
 
 	// notes
 	// NOT IMPLEMENTED
@@ -89,18 +110,18 @@ public:
 	// NOT IMPLEMENTED
 
 	// subtags
-	uint getSubtagIDFromString(std::string);
+	std::optional<uint> getSubtagIDFromString( std::string );
 
-	std::string getSubtag(uint id);
+	std::optional<std::string> getSubtag( uint subtag_id );
 
 	// tags
-	uint getTagIDFromPair(uint, uint);
+	std::optional<uint> getTagIDFromPair( uint namespace_id, uint subtag_id );
 
-	uint getTagIdFromStringPair(std::string, std::string);
+	std::optional<uint> getTagIDFromStringPair( const std::string& group, const std::string& subtag );
 
-	std::pair<uint, uint> getTagPair(uint);
+	std::optional<std::pair<uint, uint>> getTagPair( uint tag_id );
 
-	std::pair<std::string, std::string> getTagPairString(uint);
+	std::optional<std::pair<std::string, std::string>> getTagPairString( const uint tag_id );
 
 	// texts
 	// NOT IMPLEMENTED
@@ -113,15 +134,26 @@ public:
 };
 
 
-class Mappings {
-	sqlite::database db;
+class Mappings
+{
+	sqlite3* db;
+
+	//sqlite::database_binder preparedGetImageList = db << "select hash_id from current_mappings_8 where tag_id == ?";
+	//sqlite::database_binder preparedGetTagList = db << "select tag_id from current_mappings_8 where hash_id == ?";
 
 public:
-	Mappings(std::filesystem::path path) : db(path) {
+	Mappings( std::filesystem::path path )
+	{
+		sqlite3_open( path.c_str(), &db );
 	}
+
+	std::vector<uint> getImageList( uint tag_id );
+
+	std::vector<uint> getTagList( uint hash_id );
 };
 
-class HydrusCXX {
+class HydrusCXX
+{
 public:
 	// Contains all the basic DB operations/info
 	Mappings mappings;
@@ -130,7 +162,7 @@ public:
 
 	HydrusCXX() = delete;
 
-	HydrusCXX(const std::filesystem::path &path);
+	HydrusCXX( const std::filesystem::path& path );
 };
 
 
