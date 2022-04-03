@@ -1,169 +1,168 @@
-//
-// Created by kj16609 on 3/29/22.
-//
-
-#ifndef HYDRUSCXX_HYDRUSCXX_HPP
-#define HYDRUSCXX_HYDRUSCXX_HPP
-
-
-#include <bitset>
-#include <filesystem>
-#include <unordered_map>
-#include <sqlite3.h>
-#include <optional>
+#include <sqlite_modern_cpp.h>
 #include <vector>
-
-
-class Client
-{
-	sqlite3* db;
-
-public:
-	Client( std::filesystem::path path )
-	{
-		sqlite3_open( path.c_str(), &db );
-	}
-};
-
-#define MD5LENGTH 128
-#define SHA1LENGTH 160
-#define SHA512LENGTH 512
-
-class Master
-{
-	sqlite3* db;
-
-
-	std::unordered_map<uint, std::string> subtagMap;
-
-	std::unordered_map<uint, std::string> namespaceMap;
-
-	std::unordered_map<uint, std::pair<uint, uint>> tagMap;
-
-
-	//Prepared statements
-	//"select namespace_id, subtag_id from tags where tag_id == ?";
-
-public:
-	Master( std::filesystem::path path )
-	{
-		sqlite3_open( path.c_str(), &db );
-	}
-
-	/* [IMPLEMENTED = Y/N]TABLES
-	 * [Y]hashes
-	 * [N]labels
-	 * [Y]local_hashes
-	 * [Y]namespaces
-	 * [N]notes
-	 * [N]shape_perceptual_hash_map
-	 * [N]shape_perceptual_hashes
-	 * [N]sqlite_master
-	 * [N]sqlite_stat1
-	 * [Y]subtags
-	 * [Y]tags
-	 * [N]texts
-	 * [N]url_domains
-	 * [N]urls
-	 */
-
-
-	// hashes
-	uint getHashIdFromHash( std::bitset<256> hash );
-
-	std::bitset<256> getHash( uint id );
-
-	// labels
-	// NOT IMPLEMENTED
-
-	// local_hashes
-	uint getIDFromMD5( std::bitset<MD5LENGTH> hash );
-
-	uint getIDFromSHA1( std::bitset<SHA1LENGTH> hash );
-
-	uint getIDFromSHA512( std::bitset<SHA512LENGTH> hash );
-
-	std::bitset<MD5LENGTH> getMD5( uint id );
-
-	std::bitset<SHA1LENGTH> getSHA1( uint id );
-
-	std::bitset<SHA512LENGTH> getSHA512( uint id );
-
-	// namespaces
-	std::optional<uint> getNamespaceIDFromString( const std::string& group );
-
-	std::optional<std::string> getNamespace( uint namespace_id );
-
-	// notes
-	// NOT IMPLEMENTED
-
-	// shape_perceptual_hash_map
-	// NOT IMPLEMENTED
-
-	// shape_perceptual_hahses
-	// NOT IMPLEMENTED
-
-	// sqlite_master
-	// NOT IMPLEMENTED
-
-	// sqlite_stat1
-	// NOT IMPLEMENTED
-
-	// subtags
-	std::optional<uint> getSubtagIDFromString( std::string );
-
-	std::optional<std::string> getSubtag( uint subtag_id );
-
-	// tags
-	std::optional<uint> getTagIDFromPair( uint namespace_id, uint subtag_id );
-
-	std::optional<uint> getTagIDFromStringPair( const std::string& group, const std::string& subtag );
-
-	std::optional<std::pair<uint, uint>> getTagPair( uint tag_id );
-
-	std::optional<std::pair<std::string, std::string>> getTagPairString( const uint tag_id );
-
-	// texts
-	// NOT IMPLEMENTED
-
-	// url_domains
-	// NOT IMPLEMENTED
-
-	// urls
-	// NOT IMPLEMENTED
-};
-
+#include <filesystem>
+#include <algorithm>
 
 class Mappings
 {
-	sqlite3* db;
-
-	//sqlite::database_binder preparedGetImageList = db << "select hash_id from current_mappings_8 where tag_id == ?";
-	//sqlite::database_binder preparedGetTagList = db << "select tag_id from current_mappings_8 where hash_id == ?";
-
 public:
-	Mappings( std::filesystem::path path )
+	sqlite::database db;
+
+	std::vector<std::vector<size_t>> currentMappings;
+
+
+	Mappings( std::filesystem::path path ) : db( path )
 	{
-		sqlite3_open( path.c_str(), &db );
 	}
 
-	std::vector<uint> getImageList( uint tag_id );
+	void loadMappings()
+	{
+		//Get a max count
+		db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1" >> [&]( size_t hashCount )
+		{
+			currentMappings.resize( hashCount + 1 );
+		};
 
-	std::vector<uint> getTagList( uint hash_id );
+		//Resize the internal vector to the size of the tags per image
+		db << "select hash_id, count(*) from current_mappings_8 group by hash_id" >> [&]( size_t hash_id, size_t count )
+		{
+			currentMappings.at( hash_id ).resize( count );
+		};
+
+
+	}
+
+	std::vector<size_t> getHashesOnTag( size_t tag )
+	{
+		std::vector<size_t> hashes;
+
+		for ( size_t i = 0; i < currentMappings.size(); ++i )
+		{
+			auto& list = currentMappings.at( i );
+
+
+
+			//Check the internal list
+			auto ret = std::find( list.begin(), list.end(), tag );
+
+			if ( ret == list.end())
+			{
+				continue;
+			}
+
+			hashes.push_back( i );
+		}
+
+		return hashes;
+	}
+
 };
 
-class HydrusCXX
+
+class Master
 {
 public:
-	// Contains all the basic DB operations/info
-	Mappings mappings;
-	Master master;
-	Client client;
+	sqlite::database db;
 
-	HydrusCXX() = delete;
+	std::vector<std::pair<size_t, size_t>> tags;
+	std::vector<std::string> subtags;
+	std::vector<std::string> namespaceTags;
 
-	HydrusCXX( const std::filesystem::path& path );
+
+	Master( std::filesystem::path path ) : db( path )
+	{
+	}
+
+	void loadTags()
+	{
+		//Get max count
+		db << "select tag_id from tags order by tag_id DESC limit 1" >> [&]( size_t tagCount )
+		{
+			tags.resize( tagCount + 1 );
+		};
+
+		db << "select * from tags" >> [&]( size_t tag_id, size_t namespace_id, size_t subtag_id )
+		{
+			tags.at( tag_id ) = std::pair( namespace_id, subtag_id );
+		};
+
+		db << "select namespace_id from namespaces order by namespace_id DESC limit 1" >> [&]( size_t count )
+		{
+			namespaceTags.resize( count + 1 );
+		};
+
+		db << "select * from namespaces" >> [&]( size_t namespace_id, std::string namespaceText )
+		{
+			namespaceTags.at( namespace_id ) = namespaceText;
+		};
+
+		db << "select subtag_id from subtags order by subtag_id DESC limit 1" >> [&]( size_t count )
+		{
+			subtags.resize( count + 1 );
+		};
+
+		db << "select * from subtags" >> [&]( size_t subtag_id, std::string text )
+		{
+			subtags.at( subtag_id ) = text;
+		};
+
+
+	}
+
+	std::string getSubtag( size_t subtag_id )
+	{
+		return subtags.at( subtag_id );
+	}
+
+	std::string getNamespace( size_t namespace_id )
+	{
+		return namespaceTags.at( namespace_id );
+	}
+
+	std::pair<std::string, std::string> getTagString( size_t tag_id )
+	{
+		auto pairID = tags.at( tag_id );
+
+		return std::pair( getNamespace( pairID.first ), getSubtag( pairID.second ));
+	}
+
+	size_t getSubtagID( std::string str )
+	{
+
+		auto ret = std::find( subtags.begin(), subtags.end(), str );
+		if ( ret == subtags.end())
+		{
+			return 0;
+		}
+
+		return static_cast<size_t>(ret - subtags.begin());
+	}
+
+	size_t getNamespaceID( std::string str )
+	{
+		auto ret = std::find( namespaceTags.begin(), namespaceTags.end(), str );
+		if ( ret == namespaceTags.end())
+		{
+			return 0;
+		}
+
+		return static_cast<size_t>(ret - namespaceTags.begin());
+	}
+
+	size_t getTagID( std::string group, std::string subtag )
+	{
+		size_t namespaceID = getNamespaceID( group );
+		size_t subtagID = getSubtagID( subtag );
+
+		auto ret = std::find( tags.begin(), tags.end(), std::pair( namespaceID, subtagID ));
+		if ( ret == tags.end())
+		{
+			return 0;
+		}
+
+		return static_cast<size_t>(ret - tags.begin());
+	}
+
 };
 
 
-#endif // HYDRUSCXX_HYDRUSCXX_HPP
