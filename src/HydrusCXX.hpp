@@ -52,87 +52,59 @@ public:
 
 	std::vector<std::vector<size_t>> currentMappings {};
 
+	std::unordered_map<size_t, size_t> hashToMemory {};
+	std::unordered_map<size_t, size_t> memoryToHash {};
+
 	void loadMappings()
 	{
 		spdlog::debug( "Loading mappings into memory" );
 		//Get a max count
 		db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1" >> [&]( uint32_t hashCount )
 		{
-			currentMappings.resize( hashCount + 1 );
+			currentMappings.reserve( hashCount + 1 );
 		};
 
 		//Resize the internal vector to the size of the tags per image
 		db << "select hash_id, count(*) from current_mappings_8 group by hash_id"
 		   >> [&]( uint32_t hash_id, uint32_t count )
 		   {
-			   currentMappings.at( hash_id ).reserve( count );
+			   currentMappings.emplace_back( std::vector<size_t>());
+			   currentMappings.back().reserve( count );
+			   hashToMemory.emplace( hash_id, currentMappings.size() - 1 );
+			   memoryToHash.emplace( currentMappings.size() - 1, hash_id );
 		   };
 
 		db << "select hash_id, tag_id from current_mappings_8" >> [&]( uint32_t hash_id, uint32_t tag_id )
 		{
-			currentMappings.at( hash_id ).push_back( tag_id );
+			auto ret = hashToMemory.find( hash_id );
+			if ( ret != hashToMemory.end())
+			{
+				currentMappings.at( ret->second ).push_back( tag_id );
+			}
 		};
 
 		//Analyze the memory and print it to the debug log
 		size_t count { 0 };
-		for ( const auto& map : currentMappings )
+		size_t wastedCount { 0 };
+
+		count += sizeof( std::vector<std::vector<size_t>> );
+		count += sizeof( std::vector<size_t> ) * currentMappings.size();
+		for ( const auto& v : currentMappings )
 		{
-			count += map.size() * sizeof( size_t );
+			count += sizeof( size_t ) * v.size();
 		}
 
+		count += sizeof( std::unordered_map<size_t, size_t> ) * 2;
+		count += ( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size() * 2 );
+
 		spdlog::debug( "Memory size after loading local Mappings: " + formatBytesize( count ));
+		spdlog::debug( "Wasted memory: " + formatBytesize( wastedCount * sizeof( size_t )));
 	}
 
 	void loadPTR( bool filtered = true )
 	{
 		spdlog::debug( "Loading PTR mappings into memory" );
 		//Load tags of images that are matched
-
-		auto bar = [&]( std::string name, size_t count, size_t max )
-		{
-			size_t textSpacing = ( name.size() + 2 );
-
-			std::string endingText = " ( " + std::to_string( count ) + " / " + std::to_string( max ) + " )";
-
-
-			int barSize = getColumnCount() - ( textSpacing + endingText.size() + 35 );
-
-			size_t current = static_cast<size_t>(( static_cast<double>(barSize) / static_cast<double>(max)) *
-												 static_cast<double>(count));
-
-			std::stringstream ss;
-
-			if ( barSize < 1 )
-			{
-				ss << name;
-				ss << endingText;
-			}
-			else
-			{
-				ss << std::setfill( '#' );
-				ss << name << " |" << std::setw( current ) << "";
-				ss << std::setfill( ' ' );
-				ss << std::setw( barSize - current ) << "|" << endingText;
-			}
-
-
-			spdlog::info( ss.str());
-
-			if ( ss.str().size() + 33 > getColumnCount())
-			{
-				//Figure out how many times we need to go up
-				size_t lines = ceil( static_cast<double>(ss.str().size()) / static_cast<double>(getColumnCount()));
-
-				for ( size_t i = 0; i < lines; i++ )
-				{
-					std::cout << "\033[A";
-				}
-				std::cout << std::flush;
-			}
-
-			std::cout << "\033[A";
-		};
-
 
 		if ( filtered )
 		{
@@ -142,49 +114,75 @@ public:
 					>> [&]( uint32_t hash_id, uint32_t tag_id )
 					{
 						//Check to see if we already have the tag
-						for ( auto& map : currentMappings.at( hash_id ))
+
+						auto ret = hashToMemory.find( hash_id );
+						if ( ret == hashToMemory.end())
 						{
-							if ( map == tag_id )
+							//Add the hash to the mapping
+							currentMappings.emplace_back( std::vector<size_t>());
+							hashToMemory.emplace( hash_id, currentMappings.size() - 1 );
+							memoryToHash.emplace( currentMappings.size() - 1, hash_id );
+							currentMappings.back().push_back( tag_id );
+						}
+						else
+						{
+							for ( auto& map : currentMappings.at( ret->second ))
 							{
-								return;
+								if ( map == tag_id )
+								{
+									return;
+								}
 							}
-						}
 
-						if ( hash_id % 100 == 0 || hash_id == currentMappings.size() - 1 )
+							currentMappings.at( ret->second ).push_back( tag_id );
+						}
+						
+						if ( hash_id % 250000 == 0 )
 						{
-							bar( "Selective PTR memory mapping", hash_id, currentMappings.size() - 1 );
+							spdlog::info( "Loaded mapping number " + std::to_string( hash_id ));
 						}
-
-						currentMappings.at( hash_id ).push_back( tag_id );
 					};
-
-			bar( "Selective PTR memory Mapping", currentMappings.size() - 1, currentMappings.size() - 1 );
-
 		}
 		else
 		{
 			spdlog::warn(
 					"loadPTR was told to load ALL tags from PTR. This could take awhile and increase memory size" );
 
-			//Resize currentMappings to new size
-			db << "select hash_id from current_mappings_14 order by hash_id DESC limit 1" >> [&]( uint32_t count )
-			{
-				currentMappings.resize( count + 1 );
-			};
-
 			db << "select hash_id, tag_id from current_mappings_14" >> [&]( uint32_t hash_id, uint32_t tag_id )
 			{
-				if ( hash_id % 1000 == 0 || hash_id == currentMappings.size() - 1 )
+				if ( hash_id % 250000 == 0 )
 				{
-					bar( "Full PTR memory mapping", hash_id, currentMappings.size() - 1 );
+					spdlog::info( "Loaded mapping number " + std::to_string( hash_id ));
 				}
-				currentMappings.at( hash_id ).push_back( tag_id );
+
+				auto ret = hashToMemory.find( hash_id );
+				if ( ret == hashToMemory.end())
+				{
+					//Add the hash to the mapping
+					currentMappings.emplace_back( std::vector<size_t>());
+					hashToMemory.emplace( hash_id, currentMappings.size() - 1 );
+					memoryToHash.emplace( currentMappings.size() - 1, hash_id );
+					currentMappings.back().push_back( tag_id );
+				}
+				else
+				{
+					for ( auto& map : currentMappings.at( ret->second ))
+					{
+						if ( map == tag_id )
+						{
+							return;
+						}
+					}
+
+					currentMappings.at( ret->second ).push_back( tag_id );
+				}
+
+
 			};
 
-			bar( "Full PTR memory Mapping", currentMappings.size() - 1, currentMappings.size() - 1 );
 		}
 
-		std::cout << std::endl;
+		spdlog::info( "Loaded Mappings" );
 
 		//Analyze the memory and print it to the debug log
 		size_t count { 0 };
@@ -210,7 +208,14 @@ public:
 
 	std::vector<size_t> getTags( size_t hash )
 	{
-		return currentMappings.at( hash );
+		auto ret = hashToMemory.find( hash );
+		if ( ret == hashToMemory.end())
+		{
+			spdlog::error( "Failed to get tags for hash: " + std::to_string( hash ));
+			return std::vector<size_t>();
+		}
+
+		return currentMappings.at( ret->second );
 	}
 
 	std::vector<size_t> getHashesOnTag( size_t tag )
@@ -229,7 +234,16 @@ public:
 				continue;
 			}
 
-			hashes.push_back( i );
+			auto ret2 = memoryToHash.find( i );
+			if ( ret2 == memoryToHash.end())
+			{
+				continue;
+			}
+			else
+			{
+				hashes.push_back( ret2->second );
+			}
+
 		}
 		return hashes;
 	}

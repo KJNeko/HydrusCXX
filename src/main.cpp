@@ -88,7 +88,7 @@ int main()
 {
 	spdlog::info( "Starting HydruCXX" );
 
-	//spdlog::set_level( spdlog::level::debug );
+	spdlog::set_level( spdlog::level::debug );
 
 	//JsonParser ptr;
 	//ptr.parse(
@@ -113,6 +113,6 @@ int main()
 	spdlog::debug( ss.str());
 
 	massTagTest( mappingDB, masterDB );
-
+	
 	return 0;
 }
