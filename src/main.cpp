@@ -100,10 +100,7 @@ int main()
 	stopwatch::Stopwatch watch( "Load all data into memory" );
 	watch.start();
 
-	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db" };
-
-	mappingDB.loadMappings();
-	mappingDB.loadPTR();
+	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db", true };
 
 	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
 

@@ -52,7 +52,6 @@ public:
 
 	std::vector<std::vector<size_t>> currentMappings {};
 
-
 	void loadMappings()
 	{
 		spdlog::debug( "Loading mappings into memory" );
@@ -98,8 +97,8 @@ public:
 
 			int barSize = getColumnCount() - ( textSpacing + endingText.size() + 35 );
 
-			size_t current = static_cast<int>(( static_cast<double>(barSize) / static_cast<double>(max)) *
-											  static_cast<double>(count));
+			size_t current = static_cast<size_t>(( static_cast<double>(barSize) / static_cast<double>(max)) *
+												 static_cast<double>(count));
 
 			std::stringstream ss;
 
