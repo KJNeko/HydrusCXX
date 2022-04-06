@@ -117,7 +117,7 @@ public:
 			}
 
 
-			spdlog::debug( ss.str());
+			spdlog::info( ss.str());
 
 			if ( ss.str().size() + 33 > getColumnCount())
 			{
