@@ -55,7 +55,7 @@ public:
 
 	void loadMappings()
 	{
-		spdlog::info( "Loading mappings into memory" );
+		spdlog::debug( "Loading mappings into memory" );
 		//Get a max count
 		db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1" >> [&]( uint32_t hashCount )
 		{
@@ -81,12 +81,12 @@ public:
 			count += map.size() * sizeof( size_t );
 		}
 
-		spdlog::info( "Memory size after loading local Mappings: " + formatBytesize( count ));
+		spdlog::debug( "Memory size after loading local Mappings: " + formatBytesize( count ));
 	}
 
 	void loadPTR( bool filtered = true )
 	{
-		spdlog::info( "Loading PTR mappings into memory" );
+		spdlog::debug( "Loading PTR mappings into memory" );
 		//Load tags of images that are matched
 
 		auto bar = [&]( std::string name, size_t count, size_t max )
@@ -96,7 +96,7 @@ public:
 			std::string endingText = " ( " + std::to_string( count ) + " / " + std::to_string( max ) + " )";
 
 
-			int barSize = getColumnCount() - ( textSpacing + endingText.size() + 33 );
+			int barSize = getColumnCount() - ( textSpacing + endingText.size() + 35 );
 
 			size_t current = static_cast<int>(( static_cast<double>(barSize) / static_cast<double>(max)) *
 											  static_cast<double>(count));
@@ -117,7 +117,7 @@ public:
 			}
 
 
-			spdlog::info( ss.str());
+			spdlog::debug( ss.str());
 
 			if ( ss.str().size() + 33 > getColumnCount())
 			{
@@ -151,13 +151,15 @@ public:
 							}
 						}
 
-						if ( hash_id % 1000 == 0 || hash_id == currentMappings.size() - 1 )
+						if ( hash_id % 100 == 0 || hash_id == currentMappings.size() - 1 )
 						{
 							bar( "Selective PTR memory mapping", hash_id, currentMappings.size() - 1 );
 						}
 
 						currentMappings.at( hash_id ).push_back( tag_id );
 					};
+
+			bar( "Selective PTR memory Mapping", currentMappings.size() - 1, currentMappings.size() - 1 );
 
 		}
 		else
@@ -173,13 +175,14 @@ public:
 
 			db << "select hash_id, tag_id from current_mappings_14" >> [&]( uint32_t hash_id, uint32_t tag_id )
 			{
-
 				if ( hash_id % 1000 == 0 || hash_id == currentMappings.size() - 1 )
 				{
 					bar( "Full PTR memory mapping", hash_id, currentMappings.size() - 1 );
 				}
 				currentMappings.at( hash_id ).push_back( tag_id );
 			};
+
+			bar( "Full PTR memory Mapping", currentMappings.size() - 1, currentMappings.size() - 1 );
 		}
 
 		std::cout << std::endl;
@@ -191,7 +194,7 @@ public:
 			count += map.size() * sizeof( size_t );
 		}
 
-		spdlog::info( "Memory size after loading PTR: " + formatBytesize( count ));
+		spdlog::debug( "Memory size after loading PTR: " + formatBytesize( count ));
 	}
 
 
@@ -202,6 +205,7 @@ public:
 		{
 			loadMappings();
 			loadPTR();
+			spdlog::info( "Preload finished for Mappings" );
 		}
 	}
 
@@ -246,7 +250,7 @@ public:
 
 	void loadTags()
 	{
-		spdlog::info( "Loading tags and other supporting info into memory" );
+		spdlog::debug( "Loading tags and other supporting info into memory" );
 		//Get max count
 		db << "select tag_id from tags order by tag_id DESC limit 1" >> [&]( size_t tagCount )
 		{
@@ -290,21 +294,21 @@ public:
 		};
 
 
-		spdlog::info( "Tag memory usage: " + formatBytesize( tags.size() * ( sizeof( size_t ) * 2 )));
+		spdlog::debug( "Tag memory usage: " + formatBytesize( tags.size() * ( sizeof( size_t ) * 2 )));
 
 		size_t count { 0 };
 		for ( const auto& item : subtags )
 		{
 			count += item.size();
 		}
-		spdlog::info( "Subtags memory usage: " + formatBytesize( count ));
+		spdlog::debug( "Subtags memory usage: " + formatBytesize( count ));
 
 		count = 0;
 		for ( const auto& item : namespaceTags )
 		{
 			count += item.size();
 		}
-		spdlog::info( "Namespace memory usage: " + formatBytesize( count ));
+		spdlog::debug( "Namespace memory usage: " + formatBytesize( count ));
 
 		count = 0;
 		for ( const auto& item : urls )
@@ -314,7 +318,7 @@ public:
 				count += url.size();
 			}
 		}
-		spdlog::info( "Urls memory usage: " + formatBytesize( count ));
+		spdlog::debug( "Urls memory usage: " + formatBytesize( count ));
 	}
 
 	Master( std::filesystem::path path, bool preload = false ) : db( path )
@@ -324,6 +328,7 @@ public:
 		if ( preload )
 		{
 			loadTags();
+			spdlog::info( "Preload finished for Master" );
 		}
 	}
 
@@ -406,12 +411,13 @@ public:
 		{
 			loadSiblings();
 			loadParents();
+			spdlog::info( "Preload finished for Main" );
 		}
 	}
 
 	void loadSiblings()
 	{
-		spdlog::info( "Loading siblings from tag_siblings into memory" );
+		spdlog::debug( "Loading siblings from tag_siblings into memory" );
 		db << "select count(*) from tag_siblings" >> [&]( size_t count )
 		{
 			siblings.reserve( count );
@@ -423,13 +429,13 @@ public:
 			siblings.push_back( std::pair( bad_tag_id, good_tag_id ));
 		};
 
-		spdlog::info(
+		spdlog::debug(
 				"Memory size after loading Siblings: " + formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 	}
 
 	void loadParents()
 	{
-		spdlog::info( "Loading parents from tag_parents into memory" );
+		spdlog::debug( "Loading parents from tag_parents into memory" );
 		db << "select count(*) from tag_parents" >> [&]( size_t count )
 		{
 			parents.reserve( count );
@@ -441,7 +447,7 @@ public:
 			   parents.push_back( std::pair( child_id, parent_id ));
 		   };
 
-		spdlog::info(
+		spdlog::debug(
 				"Memory size after loading Parents: " + formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 	}
 

@@ -39,8 +39,9 @@ void massTagTest( Mappings& map, Master& master )
 	std::string namespaceTag { "" };
 	std::string subTag { "1girl" };
 
-	std::cout << "Begining large tag fetch of images with \'" + namespaceTag + ":" + subTag +
-				 "\' and all tags attached to those images" << std::endl;
+	spdlog::debug(
+			"Begining large tag fetch of images with \'" + namespaceTag + ":" + subTag +
+			"\' and all tags attached to those images" );
 	stopwatch::Stopwatch watch( "massTagTest: imageFetch" );
 	watch.start();
 
@@ -70,16 +71,25 @@ void massTagTest( Mappings& map, Master& master )
 		}
 	}
 	watch2.stop();
-	std::cout << watch << std::endl;
-	std::cout << "Number of images returned: " << imageList.size() << std::endl;
-	std::cout << watch2 << std::endl;
-	std::cout << "Number of tags returned: " << strs.size() << std::endl;
+
+	std::stringstream ss;
+	ss << watch;
+	spdlog::debug( ss.str());
+	spdlog::debug( "Number of images returned: " + std::to_string( imageList.size()));
+
+	std::stringstream ss2;
+	ss2 << watch2;
+	spdlog::debug( ss2.str());
+	spdlog::debug( "Number of tags returned: " + std::to_string( strs.size()));
 
 }
 
 int main()
 {
 	spdlog::info( "Starting HydruCXX" );
+
+	//spdlog::set_level( spdlog::level::debug );
+
 	//JsonParser ptr;
 	//ptr.parse(
 	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f59a664fb4464f0d8cf63b1a0ea560743c009e20845b37894c1d72d8086451c" );
@@ -93,14 +103,17 @@ int main()
 	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db" };
 
 	mappingDB.loadMappings();
-	mappingDB.loadPTR( false );
+	mappingDB.loadPTR();
 
 	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
 
 	Main mainDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.db", true };
 
 	watch.stop();
-	std::cout << watch << std::endl;
+
+	std::stringstream ss;
+	ss << watch;
+	spdlog::debug( ss.str());
 
 	massTagTest( mappingDB, masterDB );
 
