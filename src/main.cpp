@@ -1,8 +1,13 @@
+#define PTRSUPPORTMEMORY
+
 #include "HydrusCXX.hpp"
 #include "stopwatch.hpp"
 
 #include <iostream>
 #include <cmath>
+
+#include <spdlog/spdlog.h>
+
 
 std::string format( int64_t count )
 {
@@ -28,101 +33,75 @@ std::string format( int64_t count )
 
 }
 
-void formatMemory( Mappings& mappingDB, Master& masterDB )
-{
-	size_t currentMappings { 0 };
-	size_t tagPair { 0 };
-	size_t namespaceTags { 0 };
-	size_t subtags { 0 };
-
-	for ( const auto& list : mappingDB.currentMappings )
-	{
-		currentMappings += list.size() * sizeof( size_t );
-	}
-
-	tagPair += masterDB.tags.size() * ( sizeof( size_t ) * 2 );
-
-	for ( const auto& str : masterDB.namespaceTags )
-	{
-		namespaceTags += str.size();
-
-	}
-
-	for ( const auto& str : masterDB.subtags )
-	{
-		subtags += str.size();
-	}
-
-	size_t total { currentMappings + tagPair + namespaceTags + subtags };
-	std::cout << "Total memory usage: " << format( static_cast<int64_t>(total)) << std::endl;
-
-
-	std::cout << "Formatted memory usage: \n";
-
-	std::cout << "Mapping memory usage: " << format( static_cast<int64_t>(currentMappings)) << std::endl;
-	std::cout << "Tag Pair memory usage: " << format( static_cast<int64_t>(tagPair)) << std::endl;
-	std::cout << "Namespace memory usage: " << format( static_cast<int64_t>(namespaceTags)) << std::endl;
-	std::cout << "Subtag memory usage: " << format( static_cast<int64_t>(subtags)) << std::endl;
-
-	return;
-}
-
 void massTagTest( Mappings& map, Master& master )
 {
-	std::cout << "Begining large tag fetch of tag '1girl' and all images with the tag" << std::endl;
-	stopwatch::Stopwatch watch( "massTagTest" );
+
+	std::string namespaceTag { "" };
+	std::string subTag { "1girl" };
+
+	std::cout << "Begining large tag fetch of images with \'" + namespaceTag + ":" + subTag +
+				 "\' and all tags attached to those images" << std::endl;
+	stopwatch::Stopwatch watch( "massTagTest: imageFetch" );
 	watch.start();
 
 	//Go fetch a tag
-	size_t tag = master.getTagID( "", "1girl" );
+	size_t tag = master.getTagID( namespaceTag, subTag );
 
 	//Fetch every image attached to the tag
-	auto imageList = map.getHashesOnTag( tag );
+	std::vector<size_t> imageList = map.getHashesOnTag( tag );
 	watch.stop();
+
+
+	//Fetch tag attached to the images
+	stopwatch::Stopwatch watch2( "massTagTest: tagFetch" );
+	watch2.start();
+
+	std::vector<std::string> strs;
+
+	for ( const size_t& image : imageList )
+	{
+		std::vector<size_t> tagList = map.getTags( image );
+
+		for ( const size_t& item : tagList )
+		{
+			std::pair<std::string, std::string> pair = master.getTagString( item );
+
+			strs.push_back( pair.first + ":" + pair.second );
+		}
+	}
+	watch2.stop();
 	std::cout << watch << std::endl;
 	std::cout << "Number of images returned: " << imageList.size() << std::endl;
+	std::cout << watch2 << std::endl;
+	std::cout << "Number of tags returned: " << strs.size() << std::endl;
 
 }
 
 int main()
 {
-	stopwatch::Stopwatch watch( "main" );
+	spdlog::info( "Starting HydruCXX" );
+	//JsonParser ptr;
+	//ptr.parse(
+	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f59a664fb4464f0d8cf63b1a0ea560743c009e20845b37894c1d72d8086451c" );
+
+	//ptr.parse(
+	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f062a8810ad3cb0a52cbaa4b864a92030e600cc413646bc255ae85a95693bea" );
+
+	stopwatch::Stopwatch watch( "Load all data into memory" );
 	watch.start();
 
 	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db" };
 
-	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db" };
-
-
 	mappingDB.loadMappings();
+	mappingDB.loadPTR( false );
 
+	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
 
-	masterDB.loadTags();
-
+	Main mainDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.db", true };
 
 	watch.stop();
 	std::cout << watch << std::endl;
 
-
-	stopwatch::Stopwatch testing( "testing" );
-	testing.start();
-
-	auto pair = masterDB.getTagString( 4 );
-	//std::cout << pair.first << ":" << pair.second << std::endl;
-
-
-	std::cout << masterDB.getSubtag( 64000 ) << std::endl;
-
-	size_t id = masterDB.getSubtagID( masterDB.getSubtag( 64000 ));
-
-	testing.stop();
-
-	std::cout << id << std::endl;
-
-
-	std::cout << testing << std::endl;
-
-	formatMemory( mappingDB, masterDB );
 	massTagTest( mappingDB, masterDB );
 
 	return 0;
