@@ -9,7 +9,7 @@ A Hydrus database API written in C++
     - [ ] Write
     - [ ] Tag Relationships
 - [ ] Mappings
-    - [ ] Read
+    - [x] Read
     - [ ] Write
     - [ ] Parse Tags
 - [ ] Metadata
@@ -17,80 +17,66 @@ A Hydrus database API written in C++
     - [ ] Verify Metadata
     - [ ] Read Metadata!
 - [ ] URLS
+    - [x] Read
     - [ ] Write
-    - [ ] Read
 
 Examples:
 
 ```cpp
 int main()
-  {
-  
-      HydrusCXX db { "/home/kj16609/Desktop/Projects/hydrus/db/" };
+{
+	spdlog::info( "Starting HydruCXX" );
 
-      unsigned int tag_id = db.master.getSubtagIDFromString( "toujou koneko" );
-  
-      std::cout << tag_id << std::endl;
-  
-      std::cout << db.master.getSubtag( tag_id ) << std::endl;
-  
-      unsigned int tagPairID = db.master.getTagIdFromStringPair( "character", "toujou koneko" );
-      std::cout << tagPairID << std::endl;
-  }
+	spdlog::set_level( spdlog::level::debug );
+
+	//JsonParser ptr;
+	//ptr.parse(
+	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f59a664fb4464f0d8cf63b1a0ea560743c009e20845b37894c1d72d8086451c" );
+
+	//ptr.parse(
+	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f062a8810ad3cb0a52cbaa4b864a92030e600cc413646bc255ae85a95693bea" );
+
+	stopwatch::Stopwatch watch( "Load all data into memory" );
+	watch.start();
+
+	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db", true };
+
+	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
+
+	Main mainDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.db", true };
+
+	watch.stop();
+
+	std::stringstream ss;
+	ss << watch;
+	spdlog::debug( ss.str());
+
+	massTagTest( mappingDB, masterDB );
+	singleTest( mappingDB, masterDB );
+
+	return 0;
+}
 ```
 
-# Master Class Table operations
+# Getting tags from an image hash_id
 
-### Hashes operations
+```cpp
+void singleTest( Mappings& map, Master& master )
+{
+stopwatch::Stopwatch watch( "singleTest: imageFetch" );
+size_t hash_id { 1337 };
 
-- [ ] Completed
+	watch.start();
+	std::vector<size_t> tagList = map.getTags( hash_id );
 
-| Function                 | Args                                          | Return Type                         |
-|--------------------------|-----------------------------------------------|-------------------------------------|
-| getHashIdFromHash        | std::bitset<256> hash                         | uint hash_id                        |
-| getHash                  | uint hash_id                                  | std::bitset<256> hash               |
+	std::vector<std::string> strs = master.getTagStrings( tagList );
 
-### local_hashes operations
-
-- [ ] Completed
-
-| Function               | Args                       | Return Type                  |
-|------------------------|----------------------------|------------------------------|
-| getIDFromMD5           | std::bitset\<MD5LENGTH>    | uint hash_id                 |
-| getIDFromSHA1          | std::bitset\<SHA1LENGTH>   | uint hash_id                 |
-| getIDFromSHA512        | std::bitset\<SHA512LENGTH> | uint hash_id                 |
-| getMD5                 | uint hash_id               | std::bitset\<MD5LENGTH>      |
-| getSHA1                | uint hash_id               | std::bitset\<SHA1LENGTH>     |
-| getSHA512              | uint hash_id               | std::bitset\<SHA512LENGTH>   |
-
-### namespaces operations
-
-- [x] Completed
-
-| Function                 | Args                                          | Return Type            |
-|--------------------------|-----------------------------------------------|------------------------|
-| getNamespaceIDFromString | std::string namespace                         | uint namespace_id      |
-| getNamespace             | uint namespace_id                             | std::string namespace  |
-
-### subtags operations
-
-- [x] Completed
-
-| Function              | Args               | Return Type    |
-|-----------------------|--------------------|----------------|
-| getSubtagIDFromString | std::string subtag | uint subtag_id |
-| getSubtag             | uint subtag_id     | std::string    |
-
-### tags operations
-
-- [x] Completed
-
-| Function               | Args                                          | Return Type                         |
-|------------------------|-----------------------------------------------|-------------------------------------|
-| getTagIDFromPair       | uint namespace_id<br/> uint subtag_id         | uint tag_id                         |
-| getTagIDFromStringPair | std::string namespace<br/> std::string subtag | uint tag_id                         |
-| getTagPair             | uint tag_id                                   | std::pair<uint, uint>               |
-| getTagPairString       | uint tag_id                                   | std::pair<std::string, std::string> |
+	watch.stop();
 
 
+	std::stringstream ss;
+	ss << watch;
+	spdlog::debug( ss.str());
+	spdlog::debug( "Number of tags returned: " + std::to_string( tagList.size()));
 
+}`````

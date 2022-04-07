@@ -34,7 +34,7 @@ public:
 		if ( preload )
 		{
 			loadMappings();
-			loadPTR( false );
+			loadPTR();
 			spdlog::info( "Preload finished for Mappings" );
 		}
 	}

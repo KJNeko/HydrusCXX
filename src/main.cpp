@@ -59,6 +59,26 @@ void massTagTest( Mappings& map, Master& master )
 
 }
 
+void singleTest( Mappings& map, Master& master )
+{
+	stopwatch::Stopwatch watch( "singleTest: imageFetch" );
+	size_t hash_id { 1337 };
+
+	watch.start();
+	std::vector<size_t> tagList = map.getTags( hash_id );
+
+	std::vector<std::string> strs = master.getTagStrings( tagList );
+
+	watch.stop();
+
+
+	std::stringstream ss;
+	ss << watch;
+	spdlog::debug( ss.str());
+	spdlog::debug( "Number of tags returned: " + std::to_string( tagList.size()));
+
+}
+
 int main()
 {
 	spdlog::info( "Starting HydruCXX" );
@@ -88,6 +108,7 @@ int main()
 	spdlog::debug( ss.str());
 
 	massTagTest( mappingDB, masterDB );
+	singleTest( mappingDB, masterDB );
 
 	return 0;
 }

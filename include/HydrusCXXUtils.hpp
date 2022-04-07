@@ -10,7 +10,7 @@
 
 inline size_t getColumnCount()
 {
-	struct winsize w;
+	winsize w;
 	ioctl( 0, TIOCGWINSZ, &w );
 	return w.ws_col;
 }

@@ -139,3 +139,15 @@ size_t Master::getTagID( std::string group, std::string subtag )
 {
 	return getTagID( getNamespaceID( group ), getSubtagID( subtag ));
 }
+
+std::vector<std::string> Master::getTagStrings( std::vector<size_t> tag_idList )
+{
+	std::vector<std::string> list;
+
+	for ( const auto& tag_id : tag_idList )
+	{
+		list.push_back( getTagString( tag_id ).first + ":" + getTagString( tag_id ).second );
+	}
+
+	return list;
+}

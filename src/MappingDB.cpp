@@ -31,9 +31,10 @@ void Mappings::loadMappings()
 		}
 	};
 
+	currentMappings.shrink_to_fit();
+
 	//Analyze the memory and print it to the debug log
 	size_t count { 0 };
-	size_t wastedCount { 0 };
 
 	count += sizeof( std::vector<std::vector<size_t>> );
 	count += sizeof( std::vector<size_t> ) * currentMappings.size();
@@ -43,10 +44,9 @@ void Mappings::loadMappings()
 	}
 
 	count += sizeof( std::unordered_map<size_t, size_t> ) * 2;
-	count += ( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size() * 2 );
+	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) * 2 );
 
 	spdlog::debug( "Memory size after loading local Mappings: " + formatBytesize( count ));
-	spdlog::debug( "Wasted memory: " + formatBytesize( wastedCount * sizeof( size_t )));
 }
 
 void Mappings::loadPTR( bool filtered )
@@ -134,10 +134,16 @@ void Mappings::loadPTR( bool filtered )
 
 	//Analyze the memory and print it to the debug log
 	size_t count { 0 };
-	for ( const auto& map : currentMappings )
+
+	count += sizeof( std::vector<std::vector<size_t>> );
+	count += sizeof( std::vector<size_t> ) * currentMappings.size();
+	for ( const auto& v : currentMappings )
 	{
-		count += map.size() * sizeof( size_t );
+		count += sizeof( size_t ) * v.size();
 	}
+
+	count += sizeof( std::unordered_map<size_t, size_t> ) * 2;
+	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) * 2 );
 
 	spdlog::debug( "Memory size after loading PTR: " + formatBytesize( count ));
 }

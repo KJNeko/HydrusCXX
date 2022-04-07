@@ -49,6 +49,8 @@ public:
 	size_t getTagID( size_t group, size_t subtag );
 
 	size_t getTagID( std::string group, std::string subtag );
+
+	std::vector<std::string> getTagStrings( std::vector<size_t> tag_idList );
 };
 
 
