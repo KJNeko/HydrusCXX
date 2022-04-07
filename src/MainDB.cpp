@@ -11,15 +11,17 @@ void Main::loadSiblings()
 	{
 		siblings.reserve( count );
 	};
-
+	
 	db << "select * from tag_siblings" >> [&](
-			[[maybe_unused]]size_t service_id, size_t bad_tag_id, size_t good_tag_id, [[maybe_unused]]bool status )
+			[[maybe_unused]]size_t service_id, size_t bad_tag_id,
+			size_t good_tag_id, [[maybe_unused]]bool status )
 	{
 		siblings.push_back( std::pair( bad_tag_id, good_tag_id ));
 	};
-
+	
 	spdlog::debug(
-			"Memory size after loading Siblings: " + formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
+			"Memory size after loading Siblings: " +
+			formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 }
 
 void Main::loadParents()
@@ -29,21 +31,23 @@ void Main::loadParents()
 	{
 		parents.reserve( count );
 	};
-
-	db << "select * from tag_parents"
-	   >> [&]( [[maybe_unused]]size_t service_id, size_t child_id, size_t parent_id, [[maybe_unused]]bool status )
-	   {
-		   parents.push_back( std::pair( child_id, parent_id ));
-	   };
-
+	
+	db << "select * from tag_parents" >> [&](
+			[[maybe_unused]]size_t service_id, size_t child_id,
+			size_t parent_id, [[maybe_unused]]bool status )
+	{
+		parents.push_back( std::pair( child_id, parent_id ));
+	};
+	
 	spdlog::debug(
-			"Memory size after loading Parents: " + formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
+			"Memory size after loading Parents: " +
+			formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 }
 
 std::vector<size_t> Main::getParents( size_t id )
 {
 	std::vector<size_t> ret;
-
+	
 	for ( auto& parent : parents )
 	{
 		if ( parent.first == id )
@@ -51,7 +55,7 @@ std::vector<size_t> Main::getParents( size_t id )
 			ret.push_back( parent.second );
 		}
 	}
-
+	
 	return ret;
 }
 
@@ -64,10 +68,10 @@ size_t Main::getSibling( size_t id )
 			return sibling.second;
 		}
 	}
-
+	
 	//Return itself if no siblings
 	return id;
-
+	
 }
 
 size_t Main::recursiveSibling( size_t id )
@@ -77,6 +81,6 @@ size_t Main::recursiveSibling( size_t id )
 	{
 		return id;
 	}
-
+	
 	return recursiveSibling( ret );
 }

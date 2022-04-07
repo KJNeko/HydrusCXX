@@ -26,7 +26,7 @@ inline std::string formatBytesize( size_t count )
 			if ( count > 1000000000 )
 			{
 				return std::to_string( count / 1000000000 ) + "GB";
-
+				
 			}
 			else
 			{

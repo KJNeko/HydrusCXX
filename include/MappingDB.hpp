@@ -17,18 +17,20 @@ class Mappings
 {
 public:
 	sqlite::database db;
-
+	
 	std::vector<std::vector<size_t>> currentMappings {};
-
+	
 	std::unordered_map<size_t, size_t> hashToMemory {};
 	std::unordered_map<size_t, size_t> memoryToHash {};
-
+	
 	void loadMappings();
-
+	
 	void loadPTR( bool filtered = true );
-
-
-	Mappings( std::filesystem::path path, bool preload = false ) : db( path )
+	
+	
+	Mappings( std::filesystem::path path, bool preload = false )
+			:
+			db( path )
 	{
 		spdlog::info( path.string() + " was opened as Mappings" );
 		if ( preload )
@@ -38,11 +40,11 @@ public:
 			spdlog::info( "Preload finished for Mappings" );
 		}
 	}
-
+	
 	std::vector<size_t> getTags( size_t hash );
-
+	
 	std::vector<size_t> getHashesOnTag( size_t tag );
-
+	
 };
 
 

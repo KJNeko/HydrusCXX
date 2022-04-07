@@ -17,11 +17,13 @@ class Main
 {
 public:
 	sqlite::database db;
-
+	
 	std::vector<std::pair<size_t, size_t>> siblings {};
 	std::vector<std::pair<size_t, size_t>> parents {};
-
-	Main( std::filesystem::path path, bool preload = false ) : db( path )
+	
+	Main( std::filesystem::path path, bool preload = false )
+			:
+			db( path )
 	{
 		spdlog::info( path.string() + " was loaded as Main" );
 		if ( preload )
@@ -31,17 +33,17 @@ public:
 			spdlog::info( "Preload finished for Main" );
 		}
 	}
-
+	
 	void loadSiblings();
-
+	
 	void loadParents();
-
+	
 	std::vector<size_t> getParents( size_t id );
-
+	
 	size_t getSibling( size_t id );
-
+	
 	size_t recursiveSibling( size_t id );
-
+	
 };
 
 
