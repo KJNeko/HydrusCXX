@@ -40,6 +40,7 @@ set(CMAKE_MAKE_PROGRAM make)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 #inclusion of project files#
 set(SOURCE_DIR "${CMAKE_SOURCE_DIR}/src")
+set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 
 include_directories(${INCLUDE_DIR})
 include_directories(${SOURCE_DIR})
@@ -49,13 +50,14 @@ file(GLOB_RECURSE SOURCES
         "${SOURCE_DIR}/*.cpp"
         "${SOURCE_DIR}/*.hlsl"
         "${SOURCE_DIR}/*.comp"
+        "${INCLUDE_DIR}/*.hpp"
         )
 
 ##SETUP EXE##
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_AUTOUIC_SEARCH_PATHS})
 
-add_executable(HydrusCXX ${SOURCES} include/ringBuffer.hpp src/HydrusCXX.cpp src/HydrusCXX.hpp)
+add_executable(HydrusCXX ${SOURCES})
 
 if (NOT TARGET spdlog)
     find_package(spdlog REQUIRED)

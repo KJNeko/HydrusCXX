@@ -8,31 +8,6 @@
 
 #include <spdlog/spdlog.h>
 
-
-std::string format( int64_t count )
-{
-	if ( count < 1000 )
-	{
-		return std::to_string( count ) + "B";
-	}
-	if ( count / 1000 > 999 )
-	{
-		if ( count / 1000 / 1000 > 999 )
-		{
-			return std::to_string( count / 1000 / 1000 / 1000 ) + "GB";
-		}
-		else
-		{
-			return std::to_string( count / 1000 / 1000 ) + "MB";
-		}
-	}
-	else
-	{
-		return std::to_string( count / 1000 ) + "KB";
-	}
-
-}
-
 void massTagTest( Mappings& map, Master& master )
 {
 
@@ -113,6 +88,6 @@ int main()
 	spdlog::debug( ss.str());
 
 	massTagTest( mappingDB, masterDB );
-	
+
 	return 0;
 }
