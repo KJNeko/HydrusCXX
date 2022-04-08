@@ -28,7 +28,7 @@ public:
 
 class WorkHook
 {
-	std::binary_semaphore lockFlag { 1 };
+	std::binary_semaphore lockFlag { 0 };
 
 public:
 	bool checkComplete()
@@ -67,7 +67,7 @@ class WorkUnit : public WorkBasic
 	bool hookAquired { false };
 
 public:
-	WorkUnit( TFunc function, Ts... argsPack )
+	WorkUnit( TFunc function, Ts& ... argsPack )
 			:
 			func( function ), args( argsPack... ), hook( new WorkHook )
 	{
@@ -102,27 +102,26 @@ class HydrusCXXThreadManager
 	
 	std::vector<std::unique_ptr<WorkBasic>> workList {};
 	
-	std::mutex workLock {};
-	
-	void pullAndDo();
-	
+	std::mutex workLock;
 	bool stopThreads { false };
 	
-	void doWork()
+	void doWork( std::mutex& lock )
 	{
+		spdlog::info( "Thread has started" );
 		while ( !stopThreads )
 		{
 			//GetWork
-			workLock.lock();
+			lock.lock();
 			if ( workList.size() == 0 )
 			{
 				std::this_thread::yield();
+				lock.unlock();
 				continue;
 			}
 			
 			std::unique_ptr<WorkBasic> work( workList.back().release());
 			workList.pop_back();
-			workLock.unlock();
+			lock.unlock();
 			
 			work->doWork();
 		}
@@ -144,22 +143,27 @@ public:
 					size, std::thread::hardware_concurrency());
 		}
 		
+		spdlog::info( "Starting {} threads", size );
 		for ( size_t i = 0; i < size; ++i )
 		{
 			threads.push_back(
-					std::thread( &HydrusCXXThreadManager::doWork, this ));
+					std::thread(
+							&HydrusCXXThreadManager::doWork, this,
+							std::ref( workLock )));
 		}
 	}
 	
 	template<typename TFunc, typename... Ts>
-	std::shared_ptr<WorkHook> addWork( TFunc func, Ts... args )
+	std::shared_ptr<WorkHook> addWork( TFunc func, Ts& ... args )
 	{
-		WorkUnit<TFunc, Ts...>* workUnit = new WorkUnit<TFunc, Ts...>(
-				func, args... );
 		
+		WorkUnit<TFunc, Ts& ...>* workUnit = new WorkUnit<TFunc, Ts& ...>(
+				func, args... );
+		workLock.lock();
 		workList.emplace_back(
 				static_cast<WorkBasic*>(workUnit));
 		auto ptr = workList.back()->acquireHook();
+		workLock.unlock();
 		if ( ptr == nullptr )
 		{
 			throw std::runtime_error(

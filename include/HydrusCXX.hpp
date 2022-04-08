@@ -12,41 +12,36 @@
 #include <mutex>
 #include <thread>
 
-void doTask(
-		std::mutex& terminalLock, std::mutex& listLock,
-		std::vector<std::pair<std::string, std::function<void()>>>& tasks )
-{
-	while ( true )
-	{
-		listLock.lock();
-		if ( tasks.empty())
-		{
-			listLock.unlock();
-			terminalLock.lock();
-			spdlog::info( "Thread finished all tasks" );
-			terminalLock.unlock();
-			return;
-		}
-		
-		std::pair<std::string, std::function<void()>> task = tasks.back();
-		tasks.pop_back();
-		listLock.unlock();
-		
-		
-		spdlog::info( "Thread started task: {}", task.first );
-		
-		task.second();
-		
-		spdlog::info( "Thread finished task: {}", task.first );
-		std::this_thread::yield();
-	}
-	
-}
-
 void initalizeMappings( Mappings& mappings, bool enablePTR, bool fullPTR )
 {
-	std::cout << "Doing work" << std::endl;
+	spdlog::info(
+			"Loading mappings table with flags: enablePTR:{}, fullPTR:{}",
+			enablePTR, fullPTR );
 	mappings.loadMappings( enablePTR, fullPTR );
+	spdlog::info( "Loaded {} mappings", mappings.currentMappings.size());
+}
+
+void initalizeMaster( Master& master )
+{
+	spdlog::info( "Loading Master table" );
+	spdlog::info( "Loading Tags" );
+	master.loadTags();
+	spdlog::info( "Loaded {} tags", master.tags.size());
+	spdlog::info( "Loading subtags" );
+	master.loadSubtags();
+	spdlog::info( "Loaded {} subtags", master.subtags.size());
+	spdlog::info( "Loading namespaces" );
+	master.loadNamespaces();
+	spdlog::info( "Loaded {} namespaces", master.namespaceTags.size());
+	spdlog::info( "Loading URLs" );
+	master.loadURLs();
+	spdlog::info( "Loaded {} URLs", master.urls.size());
+}
+
+void initalizeMain( Main& main )
+{
+	main.loadParents();
+	main.loadSiblings();
 }
 
 class HydrusCXX
@@ -67,22 +62,26 @@ public:
 			master( dbDir.string() + "/client.master.db" ),
 			main( dbDir.string() + "/client.db" ), threadManager( threadCount )
 	{
-		std::shared_ptr<WorkHook> hook = threadManager.template addWork(
-				initalizeMappings, mappings, true, false );
 		
-		spdlog::info( "Testing hook aquire" );
 		
-		size_t counter { 0 };
-		while ( !hook.get()->checkComplete())
+		//@formatter:off
+		std::vector<std::shared_ptr<WorkHook>> hooks
 		{
-			++counter;
-			std::this_thread::yield();
+			threadManager.addWork( initalizeMappings, mappings, enablePTR, enableFULLPTR ),
+			threadManager.addWork( initalizeMaster, master ),
+			threadManager.addWork( initalizeMain, main )
+		};
+		
+		//@formatter:on
+		for ( auto& hook : hooks )
+		{
+			hook.get()->waitOn();
 		}
 		
-		spdlog::info( "Took {} itterations to complete the work", counter );
+		spdlog::info( "Mapping count: {}", mappings.currentMappings.size());
 		
-		//Load the DBs
-		
+		spdlog::info( "Finished loading all information" );
+		/*
 		std::mutex terminalLock;
 		std::mutex listLock;
 		
@@ -128,7 +127,7 @@ public:
 		}
 		
 		spdlog::info( "All threads complete" );
-		
+		*/
 		spdlog::info( "HydrusCXX finished starting up." );
 	}
 	
