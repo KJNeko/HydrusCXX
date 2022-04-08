@@ -2,7 +2,6 @@
 
 #include "HydrusCXX.hpp"
 #include "stopwatch.hpp"
-#include "hashTable.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -88,11 +87,12 @@ int main()
 	std::vector<char> hash;
 	hash.resize( 256 / 8 );
 	
-	Node node( hash, 4, 1 );
-	
 	spdlog::info( "Starting HydruCXX" );
 	
 	spdlog::set_level( spdlog::level::debug );
+	spdlog::set_pattern( "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" );
+	
+	
 	
 	// JsonParser ptr;
 	// ptr.parse(
@@ -104,14 +104,7 @@ int main()
 	stopwatch::Stopwatch watch( "Load all data into memory" );
 	watch.start();
 	
-	Mappings mappingDB {
-			"/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db",
-			true };
-	
-	Master masterDB {
-			"/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
-	
-	Main mainDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.db", true };
+	HydrusCXX db( "/home/kj16609/Desktop/Projects/hydrus/db" );
 	
 	watch.stop();
 	
@@ -119,8 +112,8 @@ int main()
 	ss << watch;
 	spdlog::debug( ss.str());
 	
-	massTagTest( mappingDB, masterDB );
-	singleTest( mappingDB, masterDB );
+	massTagTest( db.mappings, db.master );
+	singleTest( db.mappings, db.master );
 	
 	return 0;
 }

@@ -4,22 +4,22 @@
 
 #include "MasterDB.hpp"
 
-void Master::loadTags()
+void Master::loadSubtags()
 {
-	spdlog::debug( "Loading tags and other supporting info into memory" );
-	//Get max count
-	db << "select tag_id from tags order by tag_id DESC limit 1"
-	   >> [&]( size_t tagCount )
+	db << "select subtag_id from subtags order by subtag_id DESC limit 1"
+	   >> [&]( size_t count )
 	   {
-		   tags.resize( tagCount + 1 );
+		   subtags.resize( count + 1 );
 	   };
 	
-	db << "select * from tags"
-	   >> [&]( size_t tag_id, size_t namespace_id, size_t subtag_id )
-	   {
-		   tags.at( tag_id ) = std::pair( namespace_id, subtag_id );
-	   };
-	
+	db << "select * from subtags" >> [&]( size_t subtag_id, std::string text )
+	{
+		subtags.at( subtag_id ) = text;
+	};
+}
+
+void Master::loadNamespaces()
+{
 	db
 			<< "select namespace_id from namespaces order by namespace_id DESC limit 1"
 			>> [&]( size_t count )
@@ -33,17 +33,25 @@ void Master::loadTags()
 		   namespaceTags.at( namespace_id ) = namespaceText;
 	   };
 	
-	db << "select subtag_id from subtags order by subtag_id DESC limit 1"
-	   >> [&]( size_t count )
+}
+
+void Master::loadTags()
+{
+	db << "select tag_id from tags order by tag_id DESC limit 1"
+	   >> [&]( size_t tagCount )
 	   {
-		   subtags.resize( count + 1 );
+		   tags.resize( tagCount + 1 );
 	   };
 	
-	db << "select * from subtags" >> [&]( size_t subtag_id, std::string text )
-	{
-		subtags.at( subtag_id ) = text;
-	};
-	
+	db << "select * from tags"
+	   >> [&]( size_t tag_id, size_t namespace_id, size_t subtag_id )
+	   {
+		   tags.at( tag_id ) = std::pair( namespace_id, subtag_id );
+	   };
+}
+
+void Master::loadURLs()
+{
 	//Get size
 	db << "select * from urls order by url_id DESC limit 1"
 	   >> [&]( size_t url_id, [[maybe_unused]]std::string url )
@@ -56,36 +64,8 @@ void Master::loadTags()
 	   {
 		   urls.at( url_id ).push_back( url );
 	   };
-	
-	
-	spdlog::debug(
-			"Tag memory usage: " +
-			formatBytesize( tags.size() * ( sizeof( size_t ) * 2 )));
-	
-	size_t count { 0 };
-	for ( const auto& item : subtags )
-	{
-		count += item.size();
-	}
-	spdlog::debug( "Subtags memory usage: " + formatBytesize( count ));
-	
-	count = 0;
-	for ( const auto& item : namespaceTags )
-	{
-		count += item.size();
-	}
-	spdlog::debug( "Namespace memory usage: " + formatBytesize( count ));
-	
-	count = 0;
-	for ( const auto& item : urls )
-	{
-		for ( const auto& url : item )
-		{
-			count += url.size();
-		}
-	}
-	spdlog::debug( "Urls memory usage: " + formatBytesize( count ));
 }
+
 
 std::string Master::getSubtag( size_t subtag_id )
 {

@@ -6,7 +6,6 @@
 
 void Main::loadSiblings()
 {
-	spdlog::debug( "Loading siblings from tag_siblings into memory" );
 	db << "select count(*) from tag_siblings" >> [&]( size_t count )
 	{
 		siblings.reserve( count );
@@ -18,15 +17,10 @@ void Main::loadSiblings()
 	{
 		siblings.push_back( std::pair( bad_tag_id, good_tag_id ));
 	};
-	
-	spdlog::debug(
-			"Memory size after loading Siblings: " +
-			formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 }
 
 void Main::loadParents()
 {
-	spdlog::debug( "Loading parents from tag_parents into memory" );
 	db << "select count(*) from tag_parents" >> [&]( size_t count )
 	{
 		parents.reserve( count );
@@ -39,9 +33,6 @@ void Main::loadParents()
 		parents.push_back( std::pair( child_id, parent_id ));
 	};
 	
-	spdlog::debug(
-			"Memory size after loading Parents: " +
-			formatBytesize( siblings.size() * ( sizeof( size_t ) * 2 )));
 }
 
 std::vector<size_t> Main::getParents( size_t id )

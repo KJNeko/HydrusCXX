@@ -4,9 +4,8 @@
 
 #include "MappingDB.hpp"
 
-void Mappings::loadMappings()
+void Mappings::loadMappings( bool enablePTR, bool fullPTR )
 {
-	spdlog::debug( "Loading mappings into memory" );
 	//Get a max count
 	db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1"
 	   >> [&]( uint32_t hashCount )
@@ -50,14 +49,15 @@ void Mappings::loadMappings()
 	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) *
 			  2 );
 	
-	spdlog::debug(
-			"Memory size after loading local Mappings: " +
-			formatBytesize( count ));
+	if ( enablePTR )
+	{
+		loadPTR( !fullPTR );
+	}
+	
 }
 
 void Mappings::loadPTR( bool filtered )
 {
-	spdlog::debug( "Loading PTR mappings into memory" );
 	//Load tags of images that are matched
 	
 	if ( filtered )
@@ -95,9 +95,6 @@ void Mappings::loadPTR( bool filtered )
 					
 					if ( hash_id % 250000 == 0 )
 					{
-						spdlog::info(
-								"Loaded mapping number " +
-								std::to_string( hash_id ));
 					}
 				};
 	}
@@ -109,13 +106,6 @@ void Mappings::loadPTR( bool filtered )
 		db << "select hash_id, tag_id from current_mappings_14"
 		   >> [&]( uint32_t hash_id, uint32_t tag_id )
 		   {
-			   if ( hash_id % 2000000 == 0 )
-			   {
-				   spdlog::info(
-						   "Loaded mapping number " +
-						   std::to_string( hash_id ));
-			   }
-			
 			   auto ret = hashToMemory.find( hash_id );
 			   if ( ret == hashToMemory.end())
 			   {
@@ -143,8 +133,6 @@ void Mappings::loadPTR( bool filtered )
 		
 	}
 	
-	spdlog::info( "Loaded Mappings" );
-	
 	//Analyze the memory and print it to the debug log
 	size_t count { 0 };
 	
@@ -159,7 +147,6 @@ void Mappings::loadPTR( bool filtered )
 	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) *
 			  2 );
 	
-	spdlog::debug( "Memory size after loading PTR: " + formatBytesize( count ));
 }
 
 std::vector<size_t> Mappings::getTags( size_t hash )

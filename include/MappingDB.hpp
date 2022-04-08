@@ -23,22 +23,16 @@ public:
 	std::unordered_map<size_t, size_t> hashToMemory {};
 	std::unordered_map<size_t, size_t> memoryToHash {};
 	
-	void loadMappings();
+	void loadMappings( bool enablePTR, bool fullPTR );
 	
 	void loadPTR( bool filtered = true );
 	
 	
-	Mappings( std::filesystem::path path, bool preload = false )
+	Mappings( std::filesystem::path path )
 			:
 			db( path )
 	{
 		spdlog::info( path.string() + " was opened as Mappings" );
-		if ( preload )
-		{
-			loadMappings();
-			loadPTR();
-			spdlog::info( "Preload finished for Mappings" );
-		}
 	}
 	
 	std::vector<size_t> getTags( size_t hash );

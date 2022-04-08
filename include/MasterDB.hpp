@@ -25,17 +25,11 @@ public:
 	
 	void loadTags();
 	
-	Master( std::filesystem::path path, bool preload = false )
+	Master( std::filesystem::path path )
 			:
 			db( path )
 	{
 		spdlog::info( path.string() + " was opened in Master" );
-		
-		if ( preload )
-		{
-			loadTags();
-			spdlog::info( "Preload finished for Master" );
-		}
 	}
 	
 	std::string getSubtag( size_t subtag_id );
@@ -53,6 +47,12 @@ public:
 	size_t getTagID( std::string group, std::string subtag );
 	
 	std::vector<std::string> getTagStrings( std::vector<size_t> tag_idList );
+	
+	void loadNamespaces();
+	
+	void loadSubtags();
+	
+	void loadURLs();
 };
 
 

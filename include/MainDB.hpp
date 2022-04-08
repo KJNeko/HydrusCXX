@@ -21,17 +21,11 @@ public:
 	std::vector<std::pair<size_t, size_t>> siblings {};
 	std::vector<std::pair<size_t, size_t>> parents {};
 	
-	Main( std::filesystem::path path, bool preload = false )
+	Main( std::filesystem::path path )
 			:
 			db( path )
 	{
 		spdlog::info( path.string() + " was loaded as Main" );
-		if ( preload )
-		{
-			loadSiblings();
-			loadParents();
-			spdlog::info( "Preload finished for Main" );
-		}
 	}
 	
 	void loadSiblings();
