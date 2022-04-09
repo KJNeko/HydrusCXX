@@ -11,6 +11,8 @@
 #include <memory>
 #include <queue>
 
+#include <future>
+
 #include "include/Extras/ringBuffer.hpp"
 
 #include "spdlog/spdlog.h"
@@ -22,71 +24,29 @@ class WorkBasic
 public:
 	virtual ~WorkBasic() = default;
 	
-	
-	virtual void doWork() = 0;
-	
-	virtual std::shared_ptr<WorkHook> acquireHook() = 0;
+	virtual void doTask() = 0;
 };
 
-
-class WorkHook
-{
-	std::binary_semaphore lockFlag { 0 };
-
-public:
-	bool checkComplete()
-	{
-		auto retBool = lockFlag.try_acquire();
-		if ( retBool )
-		{
-			//We managed to get the semaphore.
-			lockFlag.release();
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	
-	void waitOn()
-	{
-		lockFlag.acquire();
-	}
-	
-	void setComplete()
-	{
-		lockFlag.release();
-	}
-};
-
-
-template<typename TFunc, typename... Ts>
+template<typename Ret, typename Func, typename... Args>
 class WorkUnit final : public WorkBasic
 {
-	TFunc func;
-	std::tuple<Ts...> args;
-	std::shared_ptr<WorkHook> hook;
+	std::packaged_task<Ret( Args... )> task;
+	std::tuple<Args...> args;
 
 public:
-	WorkUnit( TFunc function, Ts& ... argsPack )
+	WorkUnit( Func func, Args... arguments )
 			:
-			func( function ), args( argsPack... ), hook( new WorkHook )
+			task( func ), args( arguments... )
+	{}
+	
+	std::future<Ret> getFuture()
 	{
+		return task.get_future();
 	}
 	
-	std::shared_ptr<WorkHook> acquireHook() override
+	void doTask() override
 	{
-		return hook;
-	}
-	
-	void doWork() override
-	{
-		std::apply(
-				[&]( auto&& ... argPack )
-				{ func( argPack... ); }, args );
-		//Work complete
-		hook->setComplete();
+		task();
 	}
 };
 
@@ -115,7 +75,7 @@ class HydrusCXXThreadManager
 				continue;
 			}
 			
-			work.value()->doWork();
+			work.value()->doTask();
 			
 			delete work.value();
 		}
@@ -148,15 +108,14 @@ public:
 		}
 	}
 	
-	template<typename TFunc, typename... Ts>
-	std::shared_ptr<WorkHook> submit( TFunc func, Ts& ... args )
+	template<typename Ret, typename Func, typename... Args>
+	std::future<Ret> submit( Func func, Args& ... args )
 	{
-		
-		auto* workUnit = new WorkUnit<TFunc, Ts& ...>( func, args... );
+		auto* workUnit = new WorkUnit<Ret, Func, Args...>( func, args... );
 		( workQueue.pushNext(
 				static_cast<WorkBasic*>(workUnit), std::chrono::seconds( 2 )));
 		
-		return workUnit->acquireHook();
+		return workUnit->getFuture();
 	}
 	
 	~HydrusCXXThreadManager()

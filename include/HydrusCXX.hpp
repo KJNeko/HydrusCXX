@@ -32,33 +32,36 @@ public:
 	{
 		
 		
-		//@formatter:off
-		std::vector<std::shared_ptr<WorkHook>> hooks
-		{
-			threadManager.submit([&]()
+		std::future<void> ptrWait;
+		
+		auto waitMappings = threadManager.submit<void>(
+				[&]()
 				{
 					mappings.loadMappings();
-					threadManager.submit([&](){mappings.loadPTR();});
-				}),
-			threadManager.submit([&]()
+					ptrWait = threadManager.submit<void>(
+							[&]()
+							{ mappings.loadPTR(); } );
+				} );
+		auto waitMain = threadManager.submit<void>(
+				[&]()
 				{
 					main.loadParents();
 					main.loadSiblings();
-				}),
-			threadManager.submit([&]()
-			{
+				} );
+		auto waitMaster = threadManager.submit<void>(
+				[&]()
+				{
 					master.loadTags();
 					master.loadSubtags();
 					master.loadNamespaces();
 					master.loadURLs();
-				}),
-		};
+				} );
 		
-		//@formatter:on
-		for ( auto& hook : hooks )
-		{
-			hook.get()->waitOn();
-		}
+		waitMappings.wait();
+		ptrWait.wait();
+		waitMain.wait();
+		waitMaster.wait();
+		
 		
 		spdlog::info( "Mapping count: {}", mappings.currentMappings.size());
 		
