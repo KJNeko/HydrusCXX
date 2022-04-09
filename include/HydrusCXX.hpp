@@ -2,9 +2,9 @@
 #define HYDRUSCXX_HPP
 
 
-#include "MappingDB.hpp"
-#include "MainDB.hpp"
-#include "MasterDB.hpp"
+#include "HydrusCXXMappingDB.hpp"
+#include "HydrusCXXMainDB.hpp"
+#include "HydrusCXXMasterDB.hpp"
 #include "HydrusCXXThreading.hpp"
 
 #include <string>
@@ -12,37 +12,6 @@
 #include <mutex>
 #include <thread>
 
-void initalizeMappings( Mappings& mappings, bool enablePTR, bool fullPTR )
-{
-	spdlog::info(
-			"Loading mappings table with flags: enablePTR:{}, fullPTR:{}",
-			enablePTR, fullPTR );
-	mappings.loadMappings( enablePTR, fullPTR );
-	spdlog::info( "Loaded {} mappings", mappings.currentMappings.size());
-}
-
-void initalizeMaster( Master& master )
-{
-	spdlog::info( "Loading Master table" );
-	spdlog::info( "Loading Tags" );
-	master.loadTags();
-	spdlog::info( "Loaded {} tags", master.tags.size());
-	spdlog::info( "Loading subtags" );
-	master.loadSubtags();
-	spdlog::info( "Loaded {} subtags", master.subtags.size());
-	spdlog::info( "Loading namespaces" );
-	master.loadNamespaces();
-	spdlog::info( "Loaded {} namespaces", master.namespaceTags.size());
-	spdlog::info( "Loading URLs" );
-	master.loadURLs();
-	spdlog::info( "Loaded {} URLs", master.urls.size());
-}
-
-void initalizeMain( Main& main )
-{
-	main.loadParents();
-	main.loadSiblings();
-}
 
 class HydrusCXX
 {
@@ -55,8 +24,7 @@ public:
 	HydrusCXXThreadManager threadManager;
 	
 	HydrusCXX(
-			std::filesystem::path dbDir, size_t threadCount = 4,
-			bool enablePTR = false, bool enableFULLPTR = false )
+			std::filesystem::path dbDir, size_t threadCount = 4 )
 			:
 			mappings( dbDir.string() + "/client.mappings.db" ),
 			master( dbDir.string() + "/client.master.db" ),
@@ -67,9 +35,23 @@ public:
 		//@formatter:off
 		std::vector<std::shared_ptr<WorkHook>> hooks
 		{
-			threadManager.addWork( initalizeMappings, mappings, enablePTR, enableFULLPTR ),
-			threadManager.addWork( initalizeMaster, master ),
-			threadManager.addWork( initalizeMain, main )
+			threadManager.submit([&]()
+				{
+					mappings.loadMappings();
+					threadManager.submit([&](){mappings.loadPTR();});
+				}),
+			threadManager.submit([&]()
+				{
+					main.loadParents();
+					main.loadSiblings();
+				}),
+			threadManager.submit([&]()
+			{
+					master.loadTags();
+					master.loadSubtags();
+					master.loadNamespaces();
+					master.loadURLs();
+				}),
 		};
 		
 		//@formatter:on

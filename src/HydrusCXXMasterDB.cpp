@@ -2,10 +2,12 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#include "MasterDB.hpp"
+#include "HydrusCXXMasterDB.hpp"
 
 void Master::loadSubtags()
 {
+	spdlog::debug( "Loading subtags..." );
+	
 	db << "select subtag_id from subtags order by subtag_id DESC limit 1"
 	   >> [&]( size_t count )
 	   {
@@ -16,10 +18,14 @@ void Master::loadSubtags()
 	{
 		subtags.at( subtag_id ) = text;
 	};
+	
+	spdlog::info( "Loaded {} subtags", subtags.size());
 }
 
 void Master::loadNamespaces()
 {
+	spdlog::debug( "Loading namespaces..." );
+	
 	db
 			<< "select namespace_id from namespaces order by namespace_id DESC limit 1"
 			>> [&]( size_t count )
@@ -33,10 +39,13 @@ void Master::loadNamespaces()
 		   namespaceTags.at( namespace_id ) = namespaceText;
 	   };
 	
+	spdlog::info( "Loaded {} namespaces.", namespaceTags.size());
 }
 
 void Master::loadTags()
 {
+	spdlog::debug( "Loading tags..." );
+	
 	db << "select tag_id from tags order by tag_id DESC limit 1"
 	   >> [&]( size_t tagCount )
 	   {
@@ -48,10 +57,14 @@ void Master::loadTags()
 	   {
 		   tags.at( tag_id ) = std::pair( namespace_id, subtag_id );
 	   };
+	
+	spdlog::info( "Loaded {} tags", tags.size());
 }
 
 void Master::loadURLs()
 {
+	spdlog::debug( "Loading URLs..." );
+	
 	//Get size
 	db << "select * from urls order by url_id DESC limit 1"
 	   >> [&]( size_t url_id, [[maybe_unused]]std::string url )
@@ -64,6 +77,8 @@ void Master::loadURLs()
 	   {
 		   urls.at( url_id ).push_back( url );
 	   };
+	
+	spdlog::info( "Loaded {} URLs", urls.size());
 }
 
 

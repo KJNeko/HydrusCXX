@@ -2,10 +2,11 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#include "MappingDB.hpp"
+#include "HydrusCXXMappingDB.hpp"
 
-void Mappings::loadMappings( bool enablePTR, bool fullPTR )
+void Mappings::loadMappings()
 {
+	spdlog::debug( "Loading mappings" );
 	//Get a max count
 	db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1"
 	   >> [&]( uint32_t hashCount )
@@ -48,16 +49,12 @@ void Mappings::loadMappings( bool enablePTR, bool fullPTR )
 	count += sizeof( std::unordered_map<size_t, size_t> ) * 2;
 	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) *
 			  2 );
-	
-	if ( enablePTR )
-	{
-		loadPTR( !fullPTR );
-	}
-	
+	spdlog::info( "Loaded {} mappings", currentMappings.size());
 }
 
 void Mappings::loadPTR( bool filtered )
 {
+	spdlog::debug( "Loading PTR Mappings" );
 	//Load tags of images that are matched
 	
 	if ( filtered )
@@ -133,20 +130,7 @@ void Mappings::loadPTR( bool filtered )
 		
 	}
 	
-	//Analyze the memory and print it to the debug log
-	size_t count { 0 };
-	
-	count += sizeof( std::vector<std::vector<size_t>> );
-	count += sizeof( std::vector<size_t> ) * currentMappings.size();
-	for ( const auto& v : currentMappings )
-	{
-		count += sizeof( size_t ) * v.size();
-	}
-	
-	count += sizeof( std::unordered_map<size_t, size_t> ) * 2;
-	count += (( sizeof( std::pair<size_t, size_t> ) * hashToMemory.size()) *
-			  2 );
-	
+	spdlog::info( "Loaded PTR Extra mappings", currentMappings.size());
 }
 
 std::vector<size_t> Mappings::getTags( size_t hash )

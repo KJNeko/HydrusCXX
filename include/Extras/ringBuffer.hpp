@@ -11,59 +11,51 @@
 #include <stdexcept>
 #include <vector>
 
-template<typename T, int num>
+template<typename T, unsigned int num>
 requires std::is_trivial_v<T> && std::is_assignable_v<T&, T>
 class ringBuffer
 {
 private:
-	std::array<T, num> buffer;
+	std::array<T, num> buffer {};
 	
 	T* read { buffer.begin() };
 	T* write { buffer.begin() };
 	
-	std::mutex readLock;
-	std::mutex writeLock;
+	std::mutex readLock {};
+	std::mutex writeLock {};
 	
 	std::counting_semaphore<num> writeCounter { num };
 	std::counting_semaphore<num> readCounter { 0 };
 
-#ifdef HYUNSAFE
-	public:
-#endif
-	
-	T& getNext_UNSAFE()
-	{
-		auto ret = read;
-		read++;
-		
-		if ( read > buffer.end())
-		{
-			// Out of bounds
-			read = buffer.data();
-		}
-		
-		return ret;
-	}
-
 public:
-	void operateNext( std::function<void( T& )> func )
+	size_t size()
 	{
-		std::lock_guard<std::mutex> lock( readLock );
-		readCounter.acquire();
-		
-		if ( read > buffer.end())
-		{
-			read = buffer.data();
-		}
-		
-		// Do the operation
-		func( getNext_UNSAFE());
-		
-		writeCounter.release();
-		return;
+		return buffer.size();
 	}
 	
-	T getNext()
+	template<typename Time>
+	std::optional<T> getNext_for( Time time )
+	{
+		std::unique_lock<std::mutex> lock( readLock );
+		
+		if ( !readCounter.template try_acquire_for( time ))
+		{
+			return std::nullopt;
+		}
+		else
+		{
+			auto ret = read;
+			read++;
+			if ( read > buffer.end())
+			{
+				read = buffer.data();
+			}
+			writeCounter.release();
+			return *ret;
+		}
+	}
+	
+	T& getNext()
 	{
 		std::lock_guard<std::mutex> lock( readLock );
 		
@@ -82,11 +74,16 @@ public:
 		return *ret;
 	}
 	
-	void pushNext( T var )
+	template<typename Time>
+	std::optional<T*>
+	pushNext( T var, Time time = std::chrono::milliseconds( 5 ))
 	{
 		std::lock_guard<std::mutex> lock( writeLock );
 		
-		writeCounter.acquire();
+		if ( !writeCounter.template try_acquire_for( time ))
+		{
+			return std::nullopt;
+		}
 		
 		if ( write > buffer.end())
 		{
@@ -94,10 +91,13 @@ public:
 		}
 		
 		*write = var;
+		
+		auto temp = write;
+		
 		write++;
 		
 		readCounter.release();
-		return;
+		return temp;
 	}
 };
 

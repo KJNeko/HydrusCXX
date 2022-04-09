@@ -2,8 +2,8 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#ifndef HYDRUSCXX_MASTERDB_HPP
-#define HYDRUSCXX_MASTERDB_HPP
+#ifndef HYDRUSCXX_HYDRUSCXXMASTERDB_HPP
+#define HYDRUSCXX_HYDRUSCXXMASTERDB_HPP
 
 #include <sqlite_modern_cpp.h>
 #include <vector>
@@ -29,7 +29,7 @@ public:
 			:
 			db( path )
 	{
-		spdlog::info( path.string() + " was opened in Master" );
+		spdlog::info( path.string() + " was opened as Master" );
 	}
 	
 	std::string getSubtag( size_t subtag_id );
@@ -56,4 +56,4 @@ public:
 };
 
 
-#endif //HYDRUSCXX_MASTERDB_HPP
+#endif //HYDRUSCXX_HYDRUSCXXMASTERDB_HPP

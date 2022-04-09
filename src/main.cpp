@@ -1,7 +1,7 @@
 #define PTRSUPPORTMEMORY
 
 #include "HydrusCXX.hpp"
-#include "stopwatch.hpp"
+#include "include/Extras/stopwatch.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -89,8 +89,6 @@ int main()
 	
 	spdlog::info( "Starting HydruCXX" );
 	
-	spdlog::set_level( spdlog::level::debug );
-	spdlog::set_pattern( "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" );
 	
 	
 	
@@ -110,7 +108,7 @@ int main()
 	
 	std::stringstream ss;
 	ss << watch;
-	spdlog::debug( ss.str());
+	spdlog::info( ss.str());
 	
 	massTagTest( db.mappings, db.master );
 	singleTest( db.mappings, db.master );

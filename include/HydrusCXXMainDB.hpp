@@ -2,8 +2,8 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#ifndef HYDRUSCXX_MAINDB_HPP
-#define HYDRUSCXX_MAINDB_HPP
+#ifndef HYDRUSCXX_HYDRUSCXXMAINDB_HPP
+#define HYDRUSCXX_HYDRUSCXXMAINDB_HPP
 
 #include <sqlite_modern_cpp.h>
 #include <vector>
@@ -25,7 +25,7 @@ public:
 			:
 			db( path )
 	{
-		spdlog::info( path.string() + " was loaded as Main" );
+		spdlog::info( path.string() + " was opened as Main" );
 	}
 	
 	void loadSiblings();
@@ -41,4 +41,4 @@ public:
 };
 
 
-#endif //HYDRUSCXX_MAINDB_HPP
+#endif //HYDRUSCXX_HYDRUSCXXMAINDB_HPP

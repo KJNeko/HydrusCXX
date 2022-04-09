@@ -2,8 +2,8 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#ifndef HYDRUSCXX_MAPPINGDB_HPP
-#define HYDRUSCXX_MAPPINGDB_HPP
+#ifndef HYDRUSCXX_HYDRUSCXXMAPPINGDB_HPP
+#define HYDRUSCXX_HYDRUSCXXMAPPINGDB_HPP
 
 #include <sqlite_modern_cpp.h>
 #include <spdlog/spdlog.h>
@@ -23,7 +23,7 @@ public:
 	std::unordered_map<size_t, size_t> hashToMemory {};
 	std::unordered_map<size_t, size_t> memoryToHash {};
 	
-	void loadMappings( bool enablePTR, bool fullPTR );
+	void loadMappings();
 	
 	void loadPTR( bool filtered = true );
 	
@@ -42,4 +42,4 @@ public:
 };
 
 
-#endif //HYDRUSCXX_MAPPINGDB_HPP
+#endif //HYDRUSCXX_HYDRUSCXXMAPPINGDB_HPP

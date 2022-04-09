@@ -2,10 +2,11 @@
 // Created by kj16609 on 4/6/22.
 //
 
-#include "MainDB.hpp"
+#include "HydrusCXXMainDB.hpp"
 
 void Main::loadSiblings()
 {
+	spdlog::debug( "Loading siblings" );
 	db << "select count(*) from tag_siblings" >> [&]( size_t count )
 	{
 		siblings.reserve( count );
@@ -17,10 +18,12 @@ void Main::loadSiblings()
 	{
 		siblings.push_back( std::pair( bad_tag_id, good_tag_id ));
 	};
+	spdlog::info( "Loaded {} siblings", siblings.size());
 }
 
 void Main::loadParents()
 {
+	spdlog::debug( "Loading parents" );
 	db << "select count(*) from tag_parents" >> [&]( size_t count )
 	{
 		parents.reserve( count );
@@ -32,7 +35,7 @@ void Main::loadParents()
 	{
 		parents.push_back( std::pair( child_id, parent_id ));
 	};
-	
+	spdlog::info( "Loaded {} parents", parents.size());
 }
 
 std::vector<size_t> Main::getParents( size_t id )

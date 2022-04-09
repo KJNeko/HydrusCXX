@@ -9,6 +9,9 @@
 #include <thread>
 #include <string>
 #include <memory>
+#include <queue>
+
+#include "include/Extras/ringBuffer.hpp"
 
 #include "spdlog/spdlog.h"
 
@@ -36,7 +39,7 @@ public:
 		auto retBool = lockFlag.try_acquire();
 		if ( retBool )
 		{
-			//We managed to aquired
+			//We managed to get the semaphore.
 			lockFlag.release();
 			return true;
 		}
@@ -59,12 +62,11 @@ public:
 
 
 template<typename TFunc, typename... Ts>
-class WorkUnit : public WorkBasic
+class WorkUnit final : public WorkBasic
 {
 	TFunc func;
 	std::tuple<Ts...> args;
 	std::shared_ptr<WorkHook> hook;
-	bool hookAquired { false };
 
 public:
 	WorkUnit( TFunc function, Ts& ... argsPack )
@@ -75,18 +77,11 @@ public:
 	
 	std::shared_ptr<WorkHook> acquireHook() override
 	{
-		hookAquired = true;
 		return hook;
 	}
 	
 	void doWork() override
 	{
-		if ( !hookAquired )
-		{
-			spdlog::warn(
-					"Attempting to do work without acquiring the hook first. Skipping work" );
-			return;
-		}
 		std::apply(
 				[&]( auto&& ... argPack )
 				{ func( argPack... ); }, args );
@@ -100,32 +95,31 @@ class HydrusCXXThreadManager
 {
 	std::vector<std::thread> threads {};
 	
-	std::vector<std::unique_ptr<WorkBasic>> workList {};
+	ringBuffer<WorkBasic*, 15> workQueue {};
 	
-	std::mutex workLock;
 	bool stopThreads { false };
 	
-	void doWork( std::mutex& lock )
+	void doWork()
 	{
-		spdlog::info( "Thread has started" );
+		spdlog::debug( "[HydrusCXX]: A thread has started" );
 		while ( !stopThreads )
 		{
 			//GetWork
-			lock.lock();
-			if ( workList.size() == 0 )
+			auto work = workQueue.getNext_for(
+					std::chrono::milliseconds( 200 ));
+			
+			if ( !work.has_value())
 			{
+				//No work to do.
 				std::this_thread::yield();
-				lock.unlock();
 				continue;
 			}
 			
-			std::unique_ptr<WorkBasic> work( workList.back().release());
-			workList.pop_back();
-			lock.unlock();
+			work.value()->doWork();
 			
-			work->doWork();
+			delete work.value();
 		}
-		spdlog::info( "A thread has stopped" );
+		spdlog::debug( "[HydrusCXX]: A thread has stopped" );
 	}
 	
 	//ringBuffer for work to be done
@@ -134,7 +128,9 @@ public:
 	{
 		if ( size == 0 )
 		{
-			spdlog::warn( "wtf are you doing?" );
+			spdlog::critical(
+					"Abnormal thread count for thread manager. Threads: {}",
+					size );
 		}
 		if ( size > std::thread::hardware_concurrency())
 		{
@@ -148,31 +144,19 @@ public:
 		{
 			threads.push_back(
 					std::thread(
-							&HydrusCXXThreadManager::doWork, this,
-							std::ref( workLock )));
+							&HydrusCXXThreadManager::doWork, this ));
 		}
 	}
 	
 	template<typename TFunc, typename... Ts>
-	std::shared_ptr<WorkHook> addWork( TFunc func, Ts& ... args )
+	std::shared_ptr<WorkHook> submit( TFunc func, Ts& ... args )
 	{
 		
-		WorkUnit<TFunc, Ts& ...>* workUnit = new WorkUnit<TFunc, Ts& ...>(
-				func, args... );
-		workLock.lock();
-		workList.emplace_back(
-				static_cast<WorkBasic*>(workUnit));
-		auto ptr = workList.back()->acquireHook();
-		workLock.unlock();
-		if ( ptr == nullptr )
-		{
-			throw std::runtime_error(
-					"Hook pointer for work unit was nullptr" );
-		}
-		else
-		{
-			return ptr;
-		}
+		auto* workUnit = new WorkUnit<TFunc, Ts& ...>( func, args... );
+		( workQueue.pushNext(
+				static_cast<WorkBasic*>(workUnit), std::chrono::seconds( 2 )));
+		
+		return workUnit->acquireHook();
 	}
 	
 	~HydrusCXXThreadManager()
