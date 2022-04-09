@@ -6,6 +6,7 @@
 
 void Main::loadSiblings()
 {
+	std::lock_guard<std::mutex> guard( siblingLock );
 	spdlog::debug( "Loading siblings" );
 	db << "select count(*) from tag_siblings" >> [&]( size_t count )
 	{
@@ -23,6 +24,7 @@ void Main::loadSiblings()
 
 void Main::loadParents()
 {
+	std::lock_guard<std::mutex> guard( parentLock );
 	spdlog::debug( "Loading parents" );
 	db << "select count(*) from tag_parents" >> [&]( size_t count )
 	{
@@ -40,6 +42,7 @@ void Main::loadParents()
 
 std::vector<size_t> Main::getParents( size_t id )
 {
+	std::lock_guard<std::mutex> guard( parentLock );
 	std::vector<size_t> ret;
 	
 	for ( auto& parent : parents )
@@ -55,6 +58,7 @@ std::vector<size_t> Main::getParents( size_t id )
 
 size_t Main::getSibling( size_t id )
 {
+	std::lock_guard<std::mutex> guard( siblingLock );
 	for ( auto& sibling : siblings )
 	{
 		if ( sibling.first == id )
@@ -65,7 +69,6 @@ size_t Main::getSibling( size_t id )
 	
 	//Return itself if no siblings
 	return id;
-	
 }
 
 size_t Main::recursiveSibling( size_t id )

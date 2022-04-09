@@ -23,6 +23,8 @@ public:
 	std::unordered_map<size_t, size_t> hashToMemory {};
 	std::unordered_map<size_t, size_t> memoryToHash {};
 	
+	std::mutex mappingLock {};
+	
 	void loadMappings();
 	
 	void loadPTR( bool filtered = true );

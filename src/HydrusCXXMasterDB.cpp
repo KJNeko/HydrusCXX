@@ -6,6 +6,7 @@
 
 void Master::loadSubtags()
 {
+	std::lock_guard<std::mutex> guard( subtagsLock );
 	spdlog::debug( "Loading subtags..." );
 	
 	db << "select subtag_id from subtags order by subtag_id DESC limit 1"
@@ -24,6 +25,7 @@ void Master::loadSubtags()
 
 void Master::loadNamespaces()
 {
+	std::lock_guard<std::mutex> guard( namespaceLock );
 	spdlog::debug( "Loading namespaces..." );
 	
 	db
@@ -44,6 +46,7 @@ void Master::loadNamespaces()
 
 void Master::loadTags()
 {
+	std::lock_guard<std::mutex> guard( tagsLock );
 	spdlog::debug( "Loading tags..." );
 	
 	db << "select tag_id from tags order by tag_id DESC limit 1"
@@ -63,6 +66,7 @@ void Master::loadTags()
 
 void Master::loadURLs()
 {
+	std::lock_guard<std::mutex> guard( urlsLock );
 	spdlog::debug( "Loading URLs..." );
 	
 	//Get size
@@ -84,16 +88,19 @@ void Master::loadURLs()
 
 std::string Master::getSubtag( size_t subtag_id )
 {
+	std::lock_guard<std::mutex> guard( subtagsLock );
 	return subtags.at( subtag_id );
 }
 
 std::string Master::getNamespace( size_t namespace_id )
 {
+	std::lock_guard<std::mutex> guard( namespaceLock );
 	return namespaceTags.at( namespace_id );
 }
 
 std::pair<std::string, std::string> Master::getTagString( size_t tag_id )
 {
+	std::lock_guard<std::mutex> guard( tagsLock );
 	auto pairID = tags.at( tag_id );
 	
 	return std::pair( getNamespace( pairID.first ), getSubtag( pairID.second ));
@@ -101,7 +108,7 @@ std::pair<std::string, std::string> Master::getTagString( size_t tag_id )
 
 size_t Master::getSubtagID( std::string str )
 {
-	
+	std::lock_guard<std::mutex> guard( subtagsLock );
 	auto ret = std::find( subtags.begin(), subtags.end(), str );
 	if ( ret == subtags.end())
 	{
@@ -113,6 +120,7 @@ size_t Master::getSubtagID( std::string str )
 
 size_t Master::getNamespaceID( std::string str )
 {
+	std::lock_guard<std::mutex> guard( namespaceLock );
 	//Check if it's empty. If so return 1
 	if ( str.empty())
 	{
@@ -130,6 +138,7 @@ size_t Master::getNamespaceID( std::string str )
 
 size_t Master::getTagID( size_t group, size_t subtag )
 {
+	std::lock_guard<std::mutex> guard( tagsLock );
 	auto ret = std::find( tags.begin(), tags.end(), std::pair( group, subtag ));
 	if ( ret == tags.end())
 	{

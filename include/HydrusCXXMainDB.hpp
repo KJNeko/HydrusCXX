@@ -21,6 +21,9 @@ public:
 	std::vector<std::pair<size_t, size_t>> siblings {};
 	std::vector<std::pair<size_t, size_t>> parents {};
 	
+	std::mutex siblingLock {};
+	std::mutex parentLock {};
+	
 	Main( std::filesystem::path path )
 			:
 			db( path )

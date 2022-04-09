@@ -6,6 +6,7 @@
 
 void Mappings::loadMappings()
 {
+	std::lock_guard<std::mutex> guard( mappingLock );
 	spdlog::debug( "Loading mappings" );
 	//Get a max count
 	db << "select hash_id from current_mappings_8 order by hash_id DESC limit 1"
@@ -54,6 +55,7 @@ void Mappings::loadMappings()
 
 void Mappings::loadPTR( bool filtered )
 {
+	std::lock_guard<std::mutex> guard( mappingLock );
 	spdlog::debug( "Loading PTR Mappings" );
 	//Load tags of images that are matched
 	
@@ -135,6 +137,7 @@ void Mappings::loadPTR( bool filtered )
 
 std::vector<size_t> Mappings::getTags( size_t hash )
 {
+	std::lock_guard<std::mutex> guard( mappingLock );
 	auto ret = hashToMemory.find( hash );
 	if ( ret == hashToMemory.end())
 	{
@@ -148,6 +151,7 @@ std::vector<size_t> Mappings::getTags( size_t hash )
 
 std::vector<size_t> Mappings::getHashesOnTag( size_t tag )
 {
+	std::lock_guard<std::mutex> guard( mappingLock );
 	std::vector<size_t> hashes;
 	
 	for ( size_t i = 0; i < currentMappings.size(); ++i )

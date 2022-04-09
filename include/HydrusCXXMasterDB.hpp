@@ -23,6 +23,12 @@ public:
 	std::vector<std::string> namespaceTags {};
 	std::vector<std::vector<std::string>> urls {};
 	
+	std::mutex tagsLock {};
+	std::mutex subtagsLock {};
+	std::mutex namespaceLock {};
+	std::mutex urlsLock {};
+	
+	
 	void loadTags();
 	
 	Master( std::filesystem::path path )
