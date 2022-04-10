@@ -4,11 +4,8 @@ A Hydrus database API written in C++
 
 ## Important notes
 
-- Hydrus must be told to leave the database or must be closed
-- HydrusCXX wil self terminate if Hydrus is not closed
-- HydrusCXX will lock the database to prevent Hydrus from starting.
-- HydrusCXX prioritises runtime speed over startup speed meaning that it can take awhile to parse the database. Do not
-  use this API for small tasks.
+- WIP
+- TODO: this
 
 # Feature set
 
