@@ -1,21 +1,25 @@
-# HydrusCXX
+# HydrusCXX Version 0.1, Supporting Hydrus V480
 
 A Hydrus database API written in C++
+
+## Important notes
+
+- Hydrus must be told to leave the database or must be closed
+- HydrusCXX wil self terminate if Hydrus is not closed
+- HydrusCXX will lock the database to prevent Hydrus from starting.
+- HydrusCXX prioritises runtime speed over startup speed meaning that it can take awhile to parse the database. Do not
+  use this API for small tasks.
 
 # Feature set
 
 - [ ] Tags
     - [X] Read
     - [ ] Write
-    - [ ] Tag Relationships
 - [ ] Mappings
     - [x] Read
     - [ ] Write
-    - [ ] Parse Tags
 - [ ] Metadata
-    - [ ] Read Metadata!
-    - [ ] Verify Metadata
-    - [ ] Read Metadata!
+    - [ ] Read Metadata
 - [ ] URLS
     - [x] Read
     - [ ] Write
@@ -27,56 +31,12 @@ int main()
 {
 	spdlog::info( "Starting HydruCXX" );
 
+	//Sets debug level
 	spdlog::set_level( spdlog::level::debug );
 
-	//JsonParser ptr;
-	//ptr.parse(
-	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f59a664fb4464f0d8cf63b1a0ea560743c009e20845b37894c1d72d8086451c" );
-
-	//ptr.parse(
-	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f062a8810ad3cb0a52cbaa4b864a92030e600cc413646bc255ae85a95693bea" );
-
-	stopwatch::Stopwatch watch( "Load all data into memory" );
-	watch.start();
-
-	Mappings mappingDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db", true };
-
-	Master masterDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.master.db", true };
-
-	Main mainDB { "/home/kj16609/Desktop/Projects/hydrus/db/client.db", true };
-
-	watch.stop();
-
-	std::stringstream ss;
-	ss << watch;
-	spdlog::debug( ss.str());
-
-	massTagTest( mappingDB, masterDB );
-	singleTest( mappingDB, masterDB );
-
+        HydrusCXX::HydruCXX hydrusDB("/path/to/hydrus/db/folder");
+			
 	return 0;
 }
 ```
 
-# Getting tags from an image hash_id
-
-```cpp
-void singleTest( Mappings& map, Master& master )
-{
-stopwatch::Stopwatch watch( "singleTest: imageFetch" );
-size_t hash_id { 1337 };
-
-	watch.start();
-	std::vector<size_t> tagList = map.getTags( hash_id );
-
-	std::vector<std::string> strs = master.getTagStrings( tagList );
-
-	watch.stop();
-
-
-	std::stringstream ss;
-	ss << watch;
-	spdlog::debug( ss.str());
-	spdlog::debug( "Number of tags returned: " + std::to_string( tagList.size()));
-
-}`````
