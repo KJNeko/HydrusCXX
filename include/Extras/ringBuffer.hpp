@@ -10,6 +10,7 @@
 #include <semaphore>
 #include <stdexcept>
 #include <vector>
+#include <optional>
 
 template<typename T, unsigned int num>
 requires std::is_trivial_v<T> && std::is_assignable_v<T&, T>

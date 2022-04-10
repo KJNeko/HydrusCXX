@@ -2,10 +2,10 @@
 #define HYDRUSCXX_HPP
 
 
-#include "HydrusCXXMappingDB.hpp"
-#include "HydrusCXXMainDB.hpp"
-#include "HydrusCXXMasterDB.hpp"
-#include "HydrusCXXThreading.hpp"
+#include "HydrusMappingDB.hpp"
+#include "HydrusMainDB.hpp"
+#include "HydrusMasterDB.hpp"
+#include "HydrusThreading.hpp"
 
 #include <string>
 #include <vector>
@@ -13,54 +13,65 @@
 #include <thread>
 
 
-class HydrusCXX
+class HydrusDB
 {
 public:
 	
-	Mappings mappings;
-	Master master;
-	Main main;
+	HydrusCXX::Mappings mappings;
+	HydrusCXX::Master master;
+	HydrusCXX::Main main;
 	
-	HydrusCXXThreadManager threadManager;
-	
-	HydrusCXX(
-			std::filesystem::path dbDir, size_t threadCount = 4 )
+	explicit HydrusDB(
+			const std::filesystem::path& dbDir )
 			:
 			mappings( dbDir.string() + "/client.mappings.db" ),
 			master( dbDir.string() + "/client.master.db" ),
-			main( dbDir.string() + "/client.db" ), threadManager( threadCount )
+			main( dbDir.string() + "/client.db" )
 	{
 		
+		auto& threadManager = HydrusCXX::Threading::ThreadManager::getInstance();
 		
-		std::future<void> ptrWait;
 		
-		auto waitMappings = threadManager.submit<void>(
-				[&]()
-				{
-					mappings.loadMappings();
-					ptrWait = threadManager.submit<void>(
-							[&]()
-							{ mappings.loadPTR(); } );
-				} );
-		auto waitMain = threadManager.submit<void>(
-				[&]()
-				{
-					main.loadParents();
-					main.loadSiblings();
-				} );
-		auto waitMaster = threadManager.submit<void>(
-				[&]()
-				{
-					master.loadTags();
-					master.loadSubtags();
-					master.loadNamespaces();
-					master.loadURLs();
-				} );
+		std::vector<std::future<void>> waitList {
 		
-		waitMappings.wait();
-		ptrWait.wait();
-		waitMain.wait();
-		waitMaster.wait();
+		};
+		
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{ mappings.loadMappings(); } ));
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{ mappings.loadPTR(); } ));
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{
+							main.loadParents();
+							main.loadSiblings();
+						} ));
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{ master.loadTags(); } ));
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{ master.loadSubtags(); } ));
+		waitList.push_back(
+				threadManager.submit<void>(
+						[&]()
+						{
+							master.loadNamespaces();
+							master.loadURLs();
+						} ));
+		
+		
+		for ( auto& future : waitList )
+		{
+			future.wait();
+		}
 		
 		
 		spdlog::info( "Mapping count: {}", mappings.currentMappings.size());

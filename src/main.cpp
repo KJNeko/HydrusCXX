@@ -1,6 +1,6 @@
-#define PTRSUPPORTMEMORY
 
-#include "HydrusCXX.hpp"
+
+#include "HydrusDB.hpp"
 #include "include/Extras/stopwatch.hpp"
 
 #include <cmath>
@@ -8,14 +8,16 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace HydrusCXX;
+
 void massTagTest( Mappings& map, Master& master )
 {
 	
-	std::string namespaceTag { "" };
+	std::string namespaceTag;
 	std::string subTag { "1girl" };
 	
 	spdlog::debug(
-			"Begining large tag fetch of images with \'" + namespaceTag + ":" +
+			"Beginning large tag fetch of images with \'" + namespaceTag + ":" +
 			subTag + "\' and all tags attached to those images" );
 	stopwatch::Stopwatch watch( "massTagTest: imageFetch" );
 	watch.start();
@@ -88,7 +90,7 @@ int main()
 	hash.resize( 256 / 8 );
 	
 	spdlog::info( "Starting HydruCXX" );
-	
+	spdlog::set_level( spdlog::level::debug );
 	
 	
 	
@@ -102,7 +104,7 @@ int main()
 	stopwatch::Stopwatch watch( "Load all data into memory" );
 	watch.start();
 	
-	HydrusCXX db( "/home/kj16609/Desktop/Projects/hydrus/db" );
+	HydrusDB db( "/home/kj16609/Desktop/Projects/hydrus/db" );
 	
 	watch.stop();
 	
@@ -112,6 +114,9 @@ int main()
 	
 	massTagTest( db.mappings, db.master );
 	singleTest( db.mappings, db.master );
+	
+	//Sync test
+	db.main.sync();
 	
 	return 0;
 }
