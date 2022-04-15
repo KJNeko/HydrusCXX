@@ -1,134 +1,54 @@
-#ifndef HYDRUSCXX_HPP
-#define HYDRUSCXX_HPP
+//
+// Created by kj16609 on 4/15/22.
+//
 
-
-#include "HydrusMappingDB.hpp"
-#include "HydrusMainDB.hpp"
-#include "HydrusMasterDB.hpp"
-#include "HydrusThreading.hpp"
+#ifndef HYDRUSCXX_HYDRUSDB_HPP
+#define HYDRUSCXX_HYDRUSDB_HPP
 
 #include <string>
-#include <vector>
-#include <mutex>
-#include <thread>
+#include <sqlite_modern_cpp.h>
+#include <filesystem>
+#include <type_traits>
 
-
-class HydrusDB
+class DB
 {
+	sqlite::database db;
+
 public:
-	
-	HydrusCXX::Mappings mappings;
-	HydrusCXX::Master master;
-	HydrusCXX::Main main;
-	
-	explicit HydrusDB(
-			const std::filesystem::path& dbDir )
+	DB( std::filesystem::path path )
 			:
-			mappings( dbDir.string() + "/client.mappings.db" ),
-			master( dbDir.string() + "/client.master.db" ),
-			main( dbDir.string() + "/client.db" )
+			db( path.string())
+	{}
+	
+	
+	template<typename returnType, bool multiReturn, class... TArgs>
+	std::optional<returnType> query( std::string query )
 	{
+		bool success = false;
+		returnType result;
 		
-		auto& threadManager = HydrusCXX::Threading::ThreadManager::getInstance();
-		
-		
-		std::vector<std::future<void>> waitList {
-		
+		db << query >> [&]( TArgs... args )
+		{
+			success = true;
+			if constexpr( multiReturn )
+			{
+				result.push_back( args... );
+			}
+			else
+			{
+				result = returnType( args... );
+			}
 		};
 		
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{ mappings.loadMappings(); } ));
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{ mappings.loadPTR(); } ));
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{
-							main.loadParents();
-							main.loadSiblings();
-						} ));
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{ master.loadTags(); } ));
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{ master.loadSubtags(); } ));
-		waitList.push_back(
-				threadManager.submit<void>(
-						[&]()
-						{
-							master.loadNamespaces();
-							master.loadURLs();
-						} ));
-		
-		
-		for ( auto& future : waitList )
+		if ( success )
 		{
-			future.wait();
+			return result;
 		}
-		
-		
-		spdlog::info( "Mapping count: {}", mappings.currentMappings.size());
-		
-		spdlog::info( "Finished loading all information" );
-		/*
-		std::mutex terminalLock;
-		std::mutex listLock;
-		
-		
-		if ( threadCount < 1 )
+		else
 		{
-			threadCount = 1;
-			spdlog::warn(
-					"Only {} thread(s) detected.",
-					std::thread::hardware_concurrency());
+			return std::nullopt;
 		}
-		
-		spdlog::info(
-				"Using {} out of a maximum of {} threads", threadCount,
-				std::thread::hardware_concurrency());
-		
-		// @formatter:off
-		std::vector<std::pair<std::string, std::function<void()>>> tasks
-		{
-			{ "Mappings:loadMappings()",    [&](){ mappings.loadMappings(enablePTR, enableFULLPTR); }},
-			{ "Master:loadTags()", [&](){master.loadTags();}},
-			{ "Master:loadSubtags()", [&](){master.loadSubtags();}},
-			{ "Master:loadNamespaces()", [&](){master.loadNamespaces();}},
-			{ "Master:loadURLs()", [&](){master.loadURLs();}},
-			{ "Main:loadSiblings()", [&](){main.loadSiblings();}},
-			{ "Main:loadParents()", [&](){main.loadParents();}}
-		};
-		// @formatter:on
-		
-		std::vector<std::thread> threads;
-		
-		for ( size_t i = 0; i < threadCount; ++i )
-		{
-			threads.push_back(
-					std::thread(
-							doTask, std::ref( terminalLock ),
-							std::ref( listLock ), std::ref( tasks )));
-		}
-		
-		for ( auto& th : threads )
-		{
-			th.join();
-		}
-		
-		spdlog::info( "All threads complete" );
-		*/
-		spdlog::info( "HydrusCXX finished starting up." );
 	}
-	
-	
 };
 
-
-#endif
+#endif //HYDRUSCXX_HYDRUSDB_HPP

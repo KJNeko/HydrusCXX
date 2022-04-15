@@ -28,7 +28,6 @@ namespace HydrusCXX::Internal {
 				if ( count > 1000000000 )
 				{
 					return std::to_string( count / 1000000000 ) + "GB";
-					
 				}
 				else
 				{
@@ -44,18 +43,6 @@ namespace HydrusCXX::Internal {
 		{
 			return std::to_string( count ) + "B";
 		}
-	}
-	
-	std::string zlibToJson( const std::string& data )
-	{
-		std::stringstream ss;
-		ss << data;
-		zstr::istream zs( ss );
-		
-		std::stringstream ss2;
-		ss2 << zs.rdbuf();
-		
-		return ss2.str();
 	}
 }
 

@@ -1,122 +1,124 @@
-
-
+#include "HydrusCache.hpp"
 #include "HydrusDB.hpp"
-#include "include/Extras/stopwatch.hpp"
+#include "Extras/stopwatch.hpp"
 
-#include <cmath>
-#include <iostream>
-
-#include <spdlog/spdlog.h>
-
-using namespace HydrusCXX;
-
-void massTagTest( Mappings& map, Master& master )
+int main()
 {
+	DB master(
+			"/home/kj16609/Desktop/Projects/hydrus/db/client.master.db" );
+	DB mappings(
+			"/home/kj16609/Desktop/Projects/hydrus/db/client.mappings.db" );
 	
-	std::string namespaceTag;
-	std::string subTag { "1girl" };
+	Cache<size_t, false, std::string> subtags(
+			&master, "select subtag from subtags where subtag_id == {}" );
 	
-	spdlog::debug(
-			"Beginning large tag fetch of images with \'" + namespaceTag + ":" +
-			subTag + "\' and all tags attached to those images" );
-	stopwatch::Stopwatch watch( "massTagTest: imageFetch" );
+	Cache<size_t, false, std::string> namespaces(
+			&master,
+			"select namespace from namespaces where namespace_id == {}" );
+	
+	Cache<size_t, false, size_t, size_t> tags(
+			&master,
+			"select namespace_id, subtag_id from tags where tag_id == {}" );
+	
+	Cache<size_t, true, size_t> tagMappings(
+			&mappings,
+			"select tag_id from current_mappings_8 where hash_id == {}", true );
+	
+	size_t count = 512 * 512;
+	stopwatch::Stopwatch watch( "First Run: " + std::to_string( count ));
 	watch.start();
+	for ( size_t i = 1; i < count; ++i )
+	{
+		std::optional<std::vector<size_t>> tagList = tagMappings.get(
+				i );
+		
+		if ( tagList.has_value())
+		{
+			for ( auto tag_id : tagList.value())
+			{
+				std::optional<std::tuple<size_t, size_t>> tag = tags.get(
+						tag_id );
+				
+				if ( tag.has_value())
+				{
+					size_t namespace_ID = std::get<0>( tag.value());
+					size_t subtag_ID = std::get<1>( tag.value());
+					
+					std::optional<std::string> subtag = subtags.get(
+							subtag_ID );
+					
+					if ( subtag.has_value())
+					{
+						std::optional<std::string> namespace_ = namespaces.get(
+								namespace_ID );
+						
+						if ( namespace_.has_value())
+						{
+							/*std::cout << namespace_.value() << ":"
+									  << subtag.value() << std::endl;*/
+						}
+					}
+				}
+			}
+		}
+	}
 	
-	// Go fetch a tag
-	size_t tag = master.getTagID( namespaceTag, subTag );
-	
-	// Fetch every image attached to the tag
-	std::vector<size_t> imageList = map.getHashesOnTag( tag );
 	watch.stop();
 	
+	size_t missCounter { 0 };
 	
-	// Fetch tag attached to the images
-	stopwatch::Stopwatch watch2( "massTagTest: tagFetch" );
+	stopwatch::Stopwatch watch2( "Second Run: " + std::to_string( count ));
 	watch2.start();
-	
-	std::vector<std::string> strs;
-	
-	for ( const size_t& image : imageList )
+	for ( size_t i = 1; i < count; ++i )
 	{
-		std::vector<size_t> tagList = map.getTags( image );
+		std::optional<std::vector<size_t>> tagList = tagMappings.get(
+				i );
 		
-		for ( const size_t& item : tagList )
+		if ( tagList.has_value())
 		{
-			std::pair<std::string, std::string> pair = master.getTagString(
-					item );
-			
-			strs.push_back( pair.first + ":" + pair.second );
+			for ( auto tag_id : tagList.value())
+			{
+				std::optional<std::tuple<size_t, size_t>> tag = tags.get(
+						tag_id );
+				
+				if ( tag.has_value())
+				{
+					size_t namespace_ID = std::get<0>( tag.value());
+					size_t subtag_ID = std::get<1>( tag.value());
+					
+					std::optional<std::string> subtag = subtags.get(
+							subtag_ID );
+					
+					if ( subtag.has_value())
+					{
+						std::optional<std::string> namespace_ = namespaces.get(
+								namespace_ID );
+						
+						if ( namespace_.has_value())
+						{
+							/*std::cout << namespace_.value() << ":"
+									  << subtag.value() << std::endl;*/
+						}
+					}
+				}
+				
+				
+			}
+		}
+		else
+		{
+			missCounter++;
 		}
 	}
 	watch2.stop();
 	
-	std::stringstream ss;
-	ss << watch;
-	spdlog::debug( ss.str());
-	spdlog::debug(
-			"Number of images returned: " + std::to_string( imageList.size()));
+	std::cout << watch << std::endl;
+	std::cout << watch2 << std::endl;
 	
-	std::stringstream ss2;
-	ss2 << watch2;
-	spdlog::debug( ss2.str());
-	spdlog::debug( "Number of tags returned: " + std::to_string( strs.size()));
-}
-
-void singleTest( Mappings& map, Master& master )
-{
-	stopwatch::Stopwatch watch( "singleTest: imageFetch" );
-	size_t hash_id { 1337 };
+	std::cout << "missCounter: " << missCounter << std::endl;
 	
-	watch.start();
-	std::vector<size_t> tagList = map.getTags( hash_id );
-	
-	std::vector<std::string> strs = master.getTagStrings( tagList );
-	
-	watch.stop();
-	
-	
-	std::stringstream ss;
-	ss << watch;
-	spdlog::debug( ss.str());
-	spdlog::debug(
-			"Number of tags returned: " + std::to_string( tagList.size()));
-}
-
-int main()
-{
-	//Testing hashes
-	
-	std::vector<char> hash;
-	hash.resize( 256 / 8 );
-	
-	spdlog::info( "Starting HydruCXX" );
-	spdlog::set_level( spdlog::level::debug );
-	
-	
-	
-	// JsonParser ptr;
-	// ptr.parse(
-	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f59a664fb4464f0d8cf63b1a0ea560743c009e20845b37894c1d72d8086451c" );
-	
-	// ptr.parse(
-	//		"/home/kj16609/Desktop/Projects/hydrusCXX/7f062a8810ad3cb0a52cbaa4b864a92030e600cc413646bc255ae85a95693bea" );
-	
-	stopwatch::Stopwatch watch( "Load all data into memory" );
-	watch.start();
-	
-	HydrusDB db( "/home/kj16609/Desktop/Projects/hydrus/db" );
-	
-	watch.stop();
-	
-	std::stringstream ss;
-	ss << watch;
-	spdlog::info( ss.str());
-	
-	massTagTest( db.mappings, db.master );
-	singleTest( db.mappings, db.master );
-	
-	//Sync test
-	db.main.sync();
-	
+	std::cout << "Subtags cached: " << subtags.cacheSize() << std::endl;
+	std::cout << "Namespaces cached: " << namespaces.cacheSize() << std::endl;
+	std::cout << "Tags cached: " << tags.cacheSize() << std::endl;
 	return 0;
 }
