@@ -15,21 +15,24 @@
 
 #include "HydrusDB.hpp"
 
-template<typename Key, bool multiReturn, class... TArgs>
-class Cache
+
+template<bool cacheEnable, typename Key, bool multiReturn, class... TArgs>
+class Query
 {
 	static constexpr bool useTuple = sizeof...( TArgs ) > 1;
 	
 	typedef std::conditional_t<useTuple, std::tuple<TArgs...>, std::tuple_element_t<0, std::tuple<TArgs...>>> Tuple;
 	typedef std::conditional_t<multiReturn, std::vector<Tuple>, Tuple> storageType;
+	typedef std::conditional_t<cacheEnable, std::unordered_map<Key, std::optional<storageType>>, void*> cacheType;
 	
 	std::string query;
 	
 	bool useEmpty;
 	
-	std::unordered_map<Key, std::optional<storageType>> cache {};
+	cacheType cache {};
 	
 	DB* db { nullptr };
+	
 	
 	std::string formatValue( Key value )
 	{
@@ -55,49 +58,86 @@ class Cache
 
 public:
 	
-	Cache( DB* databasePtr, std::string queryText, bool useEmptySpace = true )
+	Query( DB* databasePtr, std::string queryText, bool useEmptySpace = true )
 			:
 			query( queryText ), db( databasePtr ), useEmpty( useEmptySpace )
 	{
 	
 	}
 	
-	Cache operator=( const Cache& ) = delete;
+	Query operator=( const Query& ) = delete;
 	
-	Cache( const Cache& ) = delete;
+	Query( const Query& ) = delete;
 	
 	
 	size_t cacheSize()
 	{
-		return cache.size();
+		if constexpr( cacheEnable )
+		{
+			return cache.size();
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	
 	std::optional<storageType> get( Key value, bool forceQuery = false )
 	{
-		auto ret = cache.find( value );
-		
-		//Remove the previous cache if forceQuery is true
-		if ( ret != cache.end() && forceQuery )
+		if constexpr( cacheEnable )
 		{
-			cache.erase( ret );
-		}
-		
-		if ( ret != cache.end() || forceQuery )
-		{
-			return ret->second;
+			auto ret = cache.find( value );
+			
+			//Remove the previous cache if forceQuery is true
+			if ( ret != cache.end() && forceQuery )
+			{
+				cache.erase( ret );
+			}
+			
+			if ( ret != cache.end() || forceQuery )
+			{
+				return ret->second;
+			}
+			else
+			{
+				
+				std::string formattedQuery { "" };
+				
+				for ( const auto& c : query )
+				{
+					if ( c == '?' )
+					{
+						formattedQuery += formatValue( value );
+					}
+					else
+					{
+						formattedQuery += c;
+					}
+				}
+				std::optional<storageType> retQuery = db->query<storageType, multiReturn, TArgs...>(
+						formattedQuery );
+				if ( retQuery.has_value())
+				{
+					cache.emplace( value, retQuery.value());
+					return retQuery;
+				}
+				
+				if ( useEmpty )
+				{
+					cache.emplace( value, std::nullopt );
+					return std::nullopt;
+				}
+				
+				return std::nullopt;
+			}
 		}
 		else
 		{
-			
 			std::string formattedQuery { "" };
 			
 			for ( const auto& c : query )
 			{
-				if ( c == '}' ) [[unlikely]]
-				{
-					continue;
-				}
-				if ( c == '{' )
+				if ( c == '?' )
 				{
 					formattedQuery += formatValue( value );
 				}
@@ -106,22 +146,10 @@ public:
 					formattedQuery += c;
 				}
 			}
-			std::optional<storageType> retQuery = db->query<storageType, multiReturn, TArgs...>(
+			return db->query<storageType, multiReturn, TArgs...>(
 					formattedQuery );
-			if ( retQuery.has_value())
-			{
-				cache.emplace( value, retQuery.value());
-				return retQuery;
-			}
-			
-			if ( useEmpty )
-			{
-				cache.emplace( value, std::nullopt );
-				return std::nullopt;
-			}
-			
-			return std::nullopt;
 		}
+		
 	}
 };
 
